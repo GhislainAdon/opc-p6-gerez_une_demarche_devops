@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-front
+  labels: {app: {{ .Release.Name }}-front}
+spec:
+  replicas: {{ .Values.front.replicaCount }}
+  selector:
+    matchLabels: {app: {{ .Release.Name }}-front}
+  template:
+    metadata:
+      labels: {app: {{ .Release.Name }}-front}
+    spec:
+      {{- if .Values.image.pullSecret }}
+      imagePullSecrets:
+        - name: {{ .Values.image.pullSecret }}
+      {{- end }}
+      containers:
+        - name: front
+          image: "{{ .Values.image.registry }}/front:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.front.port }}
+          readinessProbe:
+            httpGet: {path: /, port: {{ .Values.front.port }}}
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: {path: /, port: {{ .Values.front.port }}}
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            {{- toYaml .Values.front.resources | nindent 12 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-front
+spec:
+  type: {{ .Values.front.service.type }}
+  selector: {app: {{ .Release.Name }}-front}
+  ports:
+    - port: {{ .Values.front.port }}
+      targetPort: {{ .Values.front.port }}
+      {{- if and (eq .Values.front.service.type "NodePort") .Values.front.service.nodePort }}
+      nodePort: {{ .Values.front.service.nodePort }}
+      {{- end }}

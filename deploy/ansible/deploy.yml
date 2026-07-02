@@ -1,0 +1,55 @@
+---
+# deploy.yml — automated deployment of the Orion stack on the target host.
+#
+#   ansible-playbook -i inventory.ini deploy.yml -e image_tag=guide-a1b2c3d4
+#
+# Chain: Terraform (namespaces + Helm releases on Minikube) → verification
+# that every pod reaches the Ready state → HTTP smoke test on the frontend.
+- name: Deploy Orion Full-Stack via Terraform + Helm on Minikube
+  hosts: deploy_hosts
+  gather_facts: false
+
+  vars:
+    terraform_dir: "{{ playbook_dir }}/../terraform"
+    image_tag: latest
+    environments: [dev, staging]
+
+  tasks:
+    - name: Apply Terraform (namespaces + Helm releases)
+      community.general.terraform:
+        project_path: "{{ terraform_dir }}"
+        state: present
+        force_init: true
+        variables:
+          image_tag: "{{ image_tag }}"
+      register: tf_result
+
+    - name: Show Terraform outputs
+      ansible.builtin.debug:
+        var: tf_result.outputs
+
+    - name: Wait for pods to be Ready in each namespace
+      ansible.builtin.command: >-
+        kubectl wait --for=condition=Ready pods --all
+        -n {{ item }} --timeout=180s
+      changed_when: false
+      loop: "{{ environments }}"
+
+    - name: Smoke test — frontend answers in dev
+      ansible.builtin.command: minikube service microcrm-front -n dev --url
+      register: front_url
+      changed_when: false
+
+    - name: Check HTTP response
+      ansible.builtin.uri:
+        url: "{{ front_url.stdout_lines[0] }}"
+        status_code: 200
+        timeout: 30
+      register: smoke
+      retries: 5
+      delay: 10
+      until: smoke.status == 200
+
+    - name: Deployment summary
+      ansible.builtin.debug:
+        msg: "Deployment OK — frontend answers at {{ front_url.stdout_lines[0] }}"

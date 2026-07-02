@@ -1,0 +1,25 @@
+# Local development stack — build and run both services from source.
+#   docker compose up -d --build
+#   front : http://localhost:8082  |  back : http://localhost:8081
+services:
+  back:
+    build:
+      context: .
+      target: back
+    ports:
+      - "8081:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/ >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+
+  front:
+    build:
+      context: .
+      target: front
+    ports:
+      - "8082:8080"
+    depends_on:
+      back:
+        condition: service_healthy

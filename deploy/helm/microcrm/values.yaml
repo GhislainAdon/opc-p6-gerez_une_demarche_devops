@@ -1,0 +1,26 @@
+# Default values — overridden per environment by values-dev.yaml / values-staging.yaml.
+image:
+  registry: registry.gitlab.com/adon88463114/opc-p6-gerez_une_demarche_devops
+  tag: latest
+  pullPolicy: IfNotPresent
+  # For the private registry, create the secret first:
+  #   kubectl create secret docker-registry gitlab-registry \
+  #     --docker-server=registry.gitlab.com --docker-username=<user> --docker-password=<deploy-token>
+  pullSecret: gitlab-registry
+
+back:
+  replicaCount: 1
+  port: 8080
+  resources:
+    requests: {cpu: 100m, memory: 256Mi}
+    limits: {cpu: 500m, memory: 512Mi}
+
+front:
+  replicaCount: 1
+  port: 8080
+  service:
+    type: ClusterIP   # NodePort on Minikube for direct access
+    nodePort: null
+  resources:
+    requests: {cpu: 50m, memory: 64Mi}
+    limits: {cpu: 200m, memory: 128Mi}

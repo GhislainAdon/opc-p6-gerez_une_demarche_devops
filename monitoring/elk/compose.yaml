@@ -1,0 +1,52 @@
+# ELK observability stack — log centralisation for the Orion platform.
+#   docker compose -f monitoring/elk/compose.yaml up -d
+#   Kibana : http://localhost:5601   |   Elasticsearch : http://localhost:9200
+#
+# Application containers ship their logs via the Docker GELF driver:
+#   docker run --log-driver gelf --log-opt gelf-address=udp://localhost:12201 ...
+# (compose: logging: {driver: gelf, options: {gelf-address: "udp://localhost:12201"}})
+services:
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.14.3
+    container_name: orion-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms1g -Xmx1g
+    ports:
+      - "9200:9200"
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:9200/_cluster/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.14.3
+    container_name: orion-logstash
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    ports:
+      - "12201:12201/udp"   # GELF input (docker log driver)
+      - "5044:5044"         # Beats input (optional)
+    volumes:
+      - ./logstash/pipeline.conf:/usr/share/logstash/pipeline/pipeline.conf:ro
+    environment:
+      - LS_JAVA_OPTS=-Xms256m -Xmx256m
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.14.3
+    container_name: orion-kibana
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    ports:
+      - "5601:5601"
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+
+volumes:
+  es_data:

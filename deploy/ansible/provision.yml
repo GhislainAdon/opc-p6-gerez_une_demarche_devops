@@ -1,0 +1,49 @@
+---
+# provision.yml — prepare a deployment host: verify/install the tooling
+# required to run the Orion stack (Docker, kubectl, Minikube, Helm, Terraform).
+#
+#   ansible-playbook -i inventory.ini provision.yml
+#
+# The playbook is idempotent: tools already present are left untouched.
+- name: Provision deployment host tooling
+  hosts: deploy_hosts
+  gather_facts: true
+
+  vars:
+    required_tools:
+      - {name: docker, url: "https://docs.docker.com/engine/install/"}
+      - {name: kubectl, url: "https://kubernetes.io/docs/tasks/tools/"}
+      - {name: minikube, url: "https://minikube.sigs.k8s.io/docs/start/"}
+      - {name: helm, url: "https://helm.sh/docs/intro/install/"}
+      - {name: terraform, url: "https://developer.hashicorp.com/terraform/install"}
+
+  tasks:
+    - name: Check tool availability
+      ansible.builtin.command: "{{ item.name }} version"
+      register: tool_check
+      changed_when: false
+      failed_when: false
+      loop: "{{ required_tools }}"
+      loop_control:
+        label: "{{ item.name }}"
+
+    - name: Report missing tools
+      ansible.builtin.fail:
+        msg: >-
+          Missing tool '{{ item.item.name }}' — install it first:
+          {{ item.item.url }}
+      when: item.rc != 0
+      loop: "{{ tool_check.results }}"
+      loop_control:
+        label: "{{ item.item.name }}"
+
+    - name: Ensure Minikube cluster is running
+      ansible.builtin.command: minikube status --format={{ '{{.Host}}' }}
+      register: mk_status
+      changed_when: false
+      failed_when: false
+
+    - name: Start Minikube when stopped
+      ansible.builtin.command: minikube start
+      when: mk_status.stdout != 'Running'
+      changed_when: true

@@ -1,33 +1,232 @@
+# Orion Full-Stack — CI/CD pipeline
+#
+# Stages:
+#   test     : unit tests + coverage + dependency report (front & back)
+#   quality  : SonarQube static analysis with blocking quality gate
+#   package  : classic builds (artifacts) + Docker images pushed to the
+#              GitLab Container Registry, tagged <ref>-<short SHA>
+#   security : Trivy vulnerability scan of both images (blocking HIGH/CRITICAL)
+#   backup   : timestamped archive of the deployable artifacts (rollback support)
+#   deploy   : smoke deployment of the images + HTTP checks (manual for demo)
+#   notify   : Discord notification of the pipeline result (always runs)
+#
+# Required CI/CD variables (Settings > CI/CD > Variables, masked):
+#   SONAR_HOST_URL, SONAR_TOKEN   -> enable the quality stage
+#   DISCORD_WEBHOOK_URL           -> enable the notify stage
+# $CI_REGISTRY_* variables are provided automatically by GitLab.
+
 stages:
   - test
-  - build
+  - quality
+  - package
+  - security
+  - backup
+  - deploy
+  - notify
+
+variables:
+  DOCKER_TLS_CERTDIR: ""
+  BACK_IMAGE: $CI_REGISTRY_IMAGE/back:$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA
+  FRONT_IMAGE: $CI_REGISTRY_IMAGE/front:$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA
+  npm_config_cache: $CI_PROJECT_DIR/.npm
+
+# ---------------------------------------------------------------- test
+
+test-back:
+  image: gradle:8.7-jdk17
+  stage: test
+  cache:
+    key: gradle-$CI_COMMIT_REF_SLUG
+    paths: [back/.gradle]
+  script:
+    - bash scripts/check_deps.sh back
+    - cd back
+    - ./gradlew --no-daemon test jacocoTestReport
+  artifacts:
+    when: always
+    reports:
+      junit: back/build/test-results/test/*.xml
+    paths:
+      - back/build/reports/jacoco/test/jacocoTestReport.xml
+      - reports/
 
 test-front:
   image: cypress/browsers:latest
   stage: test
+  cache:
+    key: npm-$CI_COMMIT_REF_SLUG
+    paths: [.npm]
   script:
+    - cd front && npm ci && cd ..
+    - bash scripts/check_deps.sh front
     - cd front
-    - npm ci
-    - CHROME_BIN=/opt/google/chrome/chrome npx @angular/cli test --no-watch --no-progress --browsers=ChromeHeadlessNoSandbox
+    - CHROME_BIN=/opt/google/chrome/chrome npx @angular/cli test --no-watch --no-progress --browsers=ChromeHeadlessNoSandbox --code-coverage
+  artifacts:
+    when: always
+    paths:
+      - front/coverage/
+      - reports/
 
-test-back:
-  image: gradle:jdk17
-  stage: test
+# ------------------------------------------------------------- quality
+
+sonarqube:
+  image:
+    name: sonarsource/sonar-scanner-cli:11
+    entrypoint: [""]
+  stage: quality
+  needs: [test-back, test-front]
+  rules:
+    - if: '$SONAR_HOST_URL && $SONAR_TOKEN'
+  variables:
+    SONAR_USER_HOME: $CI_PROJECT_DIR/.sonar
+    GIT_DEPTH: "0"
+  cache:
+    key: sonar-$CI_COMMIT_REF_SLUG
+    paths: [.sonar/cache]
+  script:
+    - sonar-scanner -Dsonar.qualitygate.wait=true
+
+# ------------------------------------------------------------- package
+
+build-back:
+  image: gradle:8.7-jdk17
+  stage: package
+  needs: [test-back]
+  cache:
+    key: gradle-$CI_COMMIT_REF_SLUG
+    paths: [back/.gradle]
   script:
     - cd back
-    - ./gradlew test
+    - ./gradlew --no-daemon build -x test
+  artifacts:
+    paths: [back/build/libs/*.jar]
 
 build-front:
-  image: node
-  stage: build
+  image: node:20-alpine
+  stage: package
+  needs: [test-front]
+  cache:
+    key: npm-$CI_COMMIT_REF_SLUG
+    paths: [.npm]
   script:
     - cd front
     - npm ci
     - npx @angular/cli build --optimization
+  artifacts:
+    paths: [front/dist/]
 
-build-back:
-  image: gradle:jdk17
-  stage: build
+docker-back:
+  image: docker:27
+  stage: package
+  needs: [test-back]
+  services:
+    - docker:27-dind
+  before_script:
+    - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
   script:
-    - cd back
-    - ./gradlew build
+    - docker build --target back -t "$BACK_IMAGE" .
+    - docker push "$BACK_IMAGE"
+
+docker-front:
+  image: docker:27
+  stage: package
+  needs: [test-front]
+  services:
+    - docker:27-dind
+  before_script:
+    - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
+  script:
+    - docker build --target front -t "$FRONT_IMAGE" .
+    - docker push "$FRONT_IMAGE"
+
+# ------------------------------------------------------------ security
+
+trivy-back:
+  image:
+    name: aquasec/trivy:latest
+    entrypoint: [""]
+  stage: security
+  needs: [docker-back]
+  variables:
+    TRIVY_USERNAME: $CI_REGISTRY_USER
+    TRIVY_PASSWORD: $CI_REGISTRY_PASSWORD
+  cache:
+    key: trivy-db
+    paths: [.trivycache]
+  script:
+    - trivy image --cache-dir .trivycache --ignorefile .trivyignore
+      --format table --output reports/trivy-back.txt
+      --exit-code 1 --severity HIGH,CRITICAL "$BACK_IMAGE"
+  artifacts:
+    when: always
+    paths: [reports/trivy-back.txt]
+
+trivy-front:
+  image:
+    name: aquasec/trivy:latest
+    entrypoint: [""]
+  stage: security
+  needs: [docker-front]
+  variables:
+    TRIVY_USERNAME: $CI_REGISTRY_USER
+    TRIVY_PASSWORD: $CI_REGISTRY_PASSWORD
+  cache:
+    key: trivy-db
+    paths: [.trivycache]
+  script:
+    - trivy image --cache-dir .trivycache --ignorefile .trivyignore
+      --format table --output reports/trivy-front.txt
+      --exit-code 1 --severity HIGH,CRITICAL "$FRONT_IMAGE"
+  artifacts:
+    when: always
+    paths: [reports/trivy-front.txt]
+
+# -------------------------------------------------------------- backup
+
+backup-artifacts:
+  image: alpine:3.20
+  stage: backup
+  needs: [build-back, build-front]
+  before_script:
+    - apk add --no-cache bash git tar
+  script:
+    - bash scripts/backup.sh backups
+  artifacts:
+    paths: [backups/]
+    expire_in: 1 week
+
+# -------------------------------------------------------------- deploy
+
+deploy-smoke:
+  image: docker:27
+  stage: deploy
+  needs: [trivy-back, trivy-front]
+  services:
+    - docker:27-dind
+  variables:
+    DEPLOY_HOST: docker
+  before_script:
+    - apk add --no-cache bash curl
+    - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
+  script:
+    - bash scripts/deploy_demo.sh "$BACK_IMAGE" "$FRONT_IMAGE"
+
+# -------------------------------------------------------------- notify
+
+notify-success:
+  image: python:3.12-alpine
+  stage: notify
+  rules:
+    - if: '$DISCORD_WEBHOOK_URL'
+      when: on_success
+  script:
+    - python3 scripts/notify_discord.py success
+
+notify-failure:
+  image: python:3.12-alpine
+  stage: notify
+  rules:
+    - if: '$DISCORD_WEBHOOK_URL'
+      when: on_failure
+  script:
+    - python3 scripts/notify_discord.py failed

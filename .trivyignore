@@ -1,0 +1,4 @@
+# CVE identifiers deliberately ignored by the Trivy gate.
+# Every entry must be justified and reviewed by the Ops team (Maïa).
+# Format: one CVE id per line, e.g.
+# CVE-2024-XXXXX  # <justification + review date>

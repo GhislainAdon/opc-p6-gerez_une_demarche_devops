@@ -13,7 +13,7 @@ images construites sur poste, contrôle sécurité manuel après livraison, dép
 
 - **Pipeline GitLab CI à 7 stages** (tests, qualité, packaging, sécurité, back-up, déploiement, notification), exécuté à chaque commit — 10 jobs, tous verts sur la branche d'intégration.
 - **Images Docker non-root tracées** (`<branche>-<SHA>`) publiées dans le **registre interne** GitLab — la dépendance DockerHub des Ops est supprimée.
-- **Sécurité shift-left** : scan Trivy bloquant + audit de dépendances à chaque commit ; quality gate SonarQube prête (activation par variables CI).
+- **Sécurité shift-left** : scan Trivy bloquant + audit de dépendances à chaque commit ; analyse **SonarQube exécutée, quality gate OK**.
 - **Déploiement industrialisé** : chart Helm (dev/staging), IaC **Terraform + Ansible**, exécuté et vérifié sur cluster Kubernetes (Minikube).
 - **Observabilité** : stack **ELK** opérationnelle (logs conteneurs → Logstash/GELF → Elasticsearch → Kibana) + calcul automatisé des **métriques DORA**.
 
@@ -36,6 +36,7 @@ Mesurées automatiquement par `scripts/dora_metrics.py` depuis l'API GitLab
 
 | Contrôle | Résultat |
 |---|---|
+| Analyse SonarQube (Java + TypeScript) | ✅ **Quality gate : OK** — 960 lignes analysées : 2 bugs, 1 vulnérabilité, 36 code smells, 0 hotspot non revu, duplication 2,5 % (dashboard : capture jointe) |
 | Tests backend (JUnit 5, unitaires + intégration JPA/REST) | ✅ 100 % verts à chaque pipeline (rapports JUnit publiés dans GitLab) |
 | Tests frontend (Karma/Jasmine, ChromeHeadless) | ✅ 100 % verts à chaque pipeline |
 | Couverture | JaCoCo (XML+HTML) et lcov produits à chaque exécution, remontés en artefacts et consommés par SonarQube ; seuils progressifs 60 % → 80 % définis dans le plan de tests |
@@ -60,10 +61,26 @@ livraison, en fin de sprint.
 
 ## 5. Captures du monitoring
 
-- `docs/captures/kibana-discover.png` — Kibana (data view `orion-logs-*`) : logs des conteneurs back/front centralisés en temps réel via GELF→Logstash, enrichis (composant, verbe/statut HTTP) — 55 documents lors du test de trafic.
-- `docs/captures/kubectl-pods.txt` — état des pods dev/staging après `terraform apply`.
-- Pipelines et rapports (JUnit, Trivy, backups) : onglet CI/CD du dépôt GitLab.
-- *(À compléter avant soutenance : dashboard Kibana 3 visualisations + capture SonarQube après activation de l'instance.)*
+**Dashboard Kibana « Orion — Supervision plateforme »** — 3 visualisations sur les access
+logs JSON de Caddy parsés par Logstash : donut des verbes HTTP, donut du volume par
+composant, table statuts HTTP × chemins (les erreurs 405 y sont visibles) :
+
+![Dashboard Kibana Orion](captures/kibana-dashboard.png)
+
+**Règle d'alerte** « erreurs HTTP 5xx applicatives » (requête Elasticsearch sur
+`http_status ≥ 500`, fenêtre 5 min, évaluée chaque minute) :
+
+![Règle d'alerte Kibana](captures/kibana-alerte.png)
+
+**Dashboard SonarQube** du projet (quality gate OK — 2 bugs, 1 vulnérabilité,
+36 code smells, 0 hotspot non revu) :
+
+![Dashboard SonarQube](captures/sonarqube-dashboard.png)
+
+Également joints : `captures/kibana-discover.png` (exploration des logs centralisés,
+champs enrichis) et `captures/kubectl-pods.txt` (pods dev/staging après `terraform
+apply`). Les rapports JUnit, Trivy et les archives de back-up sont consultables dans
+l'onglet CI/CD du dépôt GitLab.
 
 ## 6. Gains obtenus
 

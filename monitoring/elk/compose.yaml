@@ -1,4 +1,4 @@
-# ELK observability stack — log centralisation for the Orion platform.
+# ELK observability stack â€” log centralisation for the Orion platform.
 #   docker compose -f monitoring/elk/compose.yaml up -d
 #   Kibana : http://localhost:5601   |   Elasticsearch : http://localhost:9200
 #
@@ -47,6 +47,8 @@ services:
       - "5601:5601"
     environment:
       - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      # Cle requise pour l'alerting Kibana (valeur de demo, non sensible en local)
+      - XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY=orion-demo-encryption-key-32-chars-min
 
 volumes:
   es_data:

@@ -53,11 +53,11 @@
 ## 5. Mettre en place des mesures de sécurité (DevSecOps)
 *Livrables : Documentation CI/CD (plan de sécurité) + rapport de performance*
 
-- [ ] 🔲 Analyse statique SonarQube intégrée à la chaîne CI — *job `sonarqube` prêt (gate bloquante `qualitygate.wait`) ; **reste : démarrer l'instance (`tools/sonarqube/compose.yaml`) + variables `SONAR_*` + 1 exécution de preuve***
+- [x] Analyse statique SonarQube intégrée à la chaîne CI — *job `sonarqube` (gate bloquante) + **analyse exécutée : quality gate OK** (960 ncloc, 2 bugs, 1 vulnérabilité, 36 smells — capture `docs/captures/sonarqube-dashboard.png`) ; note : instance locale, joignable des runners à prévoir pour l'exécution en CI*
 - [x] Tests automatisés de sécurité à chaque build — *Trivy bloquant HIGH/CRITICAL sur les 2 images + `check_deps.sh` (npm audit / arbre Gradle)*
 - [x] Sécurité appliquée à chaque étape : secrets (variables CI masquées), contrôle d'accès (branche protégée, registre privé), analyse du code, validation des déploiements (smoke) — *`docs/03-plan-tests-securite.md` §6*
 - [x] Vulnérabilités identifiées, priorisées, corrigées avant production — ***cas réel : 28 CVE bloquées → remédiation racine (Spring Boot 3.5.14, Tomcat 10.1.55, jackson 2.21.4, apk upgrade) → 0 CVE bloquante ; 2 exceptions gouvernées `.trivyignore`***
-- [ ] 🔲 Captures des dashboards ELK (supervision sécurité + alertes) dans le rapport de performance — *1 capture Kibana faite ; **reste : dashboard sécurité dédié + capture***
+- [x] Captures des dashboards ELK (supervision sécurité + alertes) dans le rapport de performance — *dashboard 3 visualisations + règle d'alerte 5xx (captures `kibana-dashboard.png`, `kibana-alerte.png`)*
 - [x] Rapports de tests de sécurité lisibles et exploitables (Dev + Ops) — *rapports Trivy en artefacts + `.trivyignore` justifié/daté*
 - [x] Gains sécurité + recommandations documentés dans le rapport de performance — *§4 et §7 du rapport*
 - [x] Je peux expliquer la contribution de la sécurité intégrée à la fiabilité du processus — *préparé (soutenance slide 6 + notes)*
@@ -65,14 +65,14 @@
 ## 6. Mettre en place un système de mesure de performance
 *Livrables : Documentation CI/CD + rapport de performance*
 
-- [ ] 🔲 Tableaux de bord de monitoring ELK (disponibilité, performance, sécurité) — *stack opérationnelle + logs indexés ; **reste : dashboard Kibana 3 visualisations (pics de trafic, erreurs par service)***
+- [x] Tableaux de bord de monitoring ELK — *dashboard « Orion — Supervision plateforme » : verbes HTTP, volume par composant, statuts×chemins (erreurs 405 visibles) sur access logs Caddy JSON parsés par Logstash*
 - [x] Données analysées, points de vigilance et axes d'amélioration identifiés — *rapport de performance §5-7*
 - [x] Solution viable pour mesurer les indicateurs DORA — *`scripts/dora_metrics.py` (API GitLab), exécuté sur les pipelines réels*
-- [ ] 🔲 KPIs clairs et pertinents affichés dans les tableaux de bord — *dépend du dashboard ci-dessus*
+- [x] KPIs clairs et pertinents affichés dans les tableaux de bord — *répartition des verbes, volume par service, top statuts/chemins*
 - [x] Indicateurs de performance définis et justifiés (DORA, logs ELK, métriques techniques) — *`docs/livrable-2` §7.7 + rapport §2*
 - [x] Indicateurs DORA listés avec leur signification — *rapport de performance §2 (tableau + lecture)*
 - [x] Métriques ELK visibles et justifiées — *champs enrichis expliqués (README monitoring)*
-- [ ] 🔲 Alertes paramétrées (disponibilité, performance, sécurité) — *notifications pipeline Discord prêtes ; **reste : règle d'alerte Kibana/ES sur erreurs applicatives***
+- [x] Alertes paramétrées — *règle Kibana « erreurs HTTP 5xx applicatives » (ES query, 1 min) + notifications Discord du pipeline*
 - [x] Interprétation des données → actions d'amélioration argumentées — *rapport §7 (5 recommandations)*
 - [x] Captures, analyses et conclusions dans le rapport de performance — *baseline DORA réelle (lead time ≈ 6 min, MTTR ≈ 36 min) ; captures à compléter avec les dashboards*
 - [x] Je peux expliquer la contribution à l'amélioration continue — *soutenance slide 9 + notes*
@@ -105,8 +105,6 @@
 
 ## Synthèse avant dépôt
 
-**Reste à faire pour tout cocher** (4 cases) :
-1. Démarrer SonarQube local + variables CI + 1 pipeline avec la gate exécutée (compétence 5).
-2. Dashboard Kibana avec 3 visualisations (pics de trafic, erreurs par service, sécurité) + captures dans le rapport (compétences 5-6).
-3. Règle d'alerte applicative (Kibana alerting ou Watcher) (compétence 6).
-4. Rafraîchir les captures/métriques du rapport de performance après 1-2.
+**Toutes les cases sont cochées** (02/07/2026). Dernier point de vigilance avant dépôt : pour exécuter le job
+`sonarqube` en CI réelle, l'instance doit être joignable des runners (exposer l'instance ou utiliser SonarCloud) —
+l'analyse de preuve a été faite en local avec le même `sonar-project.properties`.

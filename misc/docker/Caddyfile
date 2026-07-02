@@ -1,4 +1,9 @@
 :8080 {
+	# JSON access logs to stdout — collected by the GELF driver towards Logstash/ELK
+	log {
+		output stdout
+		format json
+	}
 	root * /app/front
 	encode gzip
 	try_files {path} /index.html

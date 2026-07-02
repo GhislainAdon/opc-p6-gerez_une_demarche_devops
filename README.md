@@ -208,3 +208,48 @@ depuis le [`Dockerfile`](./Dockerfile) multi-stage :
 docker build --target back  -t microcrm-back  .   # Spring Boot, port 8080
 docker build --target front -t microcrm-front .   # Caddy + bundle Angular, port 8080
 ```
+
+## Déploiement continu (CD) et Infrastructure-as-Code
+
+### Orchestration Kubernetes (Minikube + Helm)
+
+Le chart Helm [`deploy/helm/microcrm`](./deploy/helm/microcrm) déploie les 2 composants
+(probes readiness/liveness, ressources limitées, imagePullSecret pour le registre privé) :
+
+```bash
+minikube start
+kubectl create secret docker-registry gitlab-registry \
+  --docker-server=registry.gitlab.com --docker-username=<user> --docker-password=<deploy-token>
+helm install microcrm deploy/helm/microcrm -f deploy/helm/microcrm/values-dev.yaml
+minikube service microcrm-front --url
+```
+
+Environnements différenciés : `values-dev.yaml` (1 replica, NodePort 30080) et
+`values-staging.yaml` (2 replicas — résilience, NodePort 30081).
+
+### IaC Terraform + Ansible
+
+- [`deploy/terraform/`](./deploy/terraform) : crée les namespaces `dev` et `staging`
+  et installe une release Helm dans chacun (`terraform apply -var image_tag=<tag>`).
+  State local, aucun credential versionné.
+- [`deploy/ansible/`](./deploy/ansible) :
+  - `provision.yml` — vérifie l'outillage du poste (docker, kubectl, minikube, helm, terraform) et démarre Minikube si nécessaire ;
+  - `deploy.yml` — enchaîne Terraform → attente des pods Ready → smoke test HTTP du frontend (`ansible-playbook -i inventory.ini deploy.yml -e image_tag=<tag>`).
+
+### Monitoring — stack ELK + métriques DORA
+
+```bash
+docker compose -f monitoring/elk/compose.yaml up -d   # Kibana : http://localhost:5601
+```
+
+Les conteneurs applicatifs envoient leurs logs à Logstash via le driver GELF
+(`--log-driver gelf --log-opt gelf-address=udp://localhost:12201`) ; Logstash
+enrichit (composant, verbe/statut HTTP) et indexe dans `orion-logs-*` pour les
+dashboards Kibana.
+
+Les 4 métriques **DORA** sont calculées depuis l'API GitLab par
+[`scripts/dora_metrics.py`](./scripts/dora_metrics.py) :
+
+| Script | But | Fonctionnement | Paramètres |
+|---|---|---|---|
+| `dora_metrics.py` | Mesure de la performance de livraison | Interroge l'API GitLab (pipelines + commits) et calcule : fréquence de déploiement/semaine, lead time médian commit→succès, taux d'échec des changements, MTTR (échec→succès suivant). Résultat affiché + `reports/dora_metrics.json`. | `--branch` (défaut `guide`), `--days` (défaut 30), `--project-id` ; env `GITLAB_TOKEN` |

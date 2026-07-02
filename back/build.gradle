@@ -19,11 +19,11 @@ repositories {
 
 // Security overrides — pull patched transitive dependencies (Trivy gate)
 ext['tomcat.version'] = '10.1.55'
+ext['jackson-bom.version'] = '2.21.4'
 
 dependencies {
 	constraints {
 		implementation 'net.minidev:json-smart:2.5.2'
-		implementation 'com.fasterxml.jackson.core:jackson-databind:2.21.4'
 	}
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'

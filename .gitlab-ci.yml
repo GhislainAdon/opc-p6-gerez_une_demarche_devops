@@ -154,6 +154,7 @@ trivy-back:
     key: trivy-db
     paths: [.trivycache]
   script:
+    - mkdir -p reports
     - trivy image --cache-dir .trivycache --ignorefile .trivyignore
       --format table --output reports/trivy-back.txt
       --exit-code 1 --severity HIGH,CRITICAL "$BACK_IMAGE"
@@ -174,6 +175,7 @@ trivy-front:
     key: trivy-db
     paths: [.trivycache]
   script:
+    - mkdir -p reports
     - trivy image --cache-dir .trivycache --ignorefile .trivyignore
       --format table --output reports/trivy-front.txt
       --exit-code 1 --severity HIGH,CRITICAL "$FRONT_IMAGE"

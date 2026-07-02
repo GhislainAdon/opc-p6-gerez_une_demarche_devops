@@ -45,7 +45,28 @@ resource "kubernetes_namespace" "env" {
   }
 }
 
+resource "kubernetes_secret" "registry" {
+  for_each = toset(var.environments)
+  metadata {
+    name      = "gitlab-registry"
+    namespace = kubernetes_namespace.env[each.key].metadata[0].name
+  }
+  type = "kubernetes.io/dockerconfigjson"
+  data = {
+    ".dockerconfigjson" = jsonencode({
+      auths = {
+        (var.registry_server) = {
+          username = var.registry_user
+          password = var.registry_token
+          auth     = base64encode("${var.registry_user}:${var.registry_token}")
+        }
+      }
+    })
+  }
+}
+
 resource "helm_release" "microcrm" {
+  depends_on = [kubernetes_secret.registry]
   for_each  = toset(var.environments)
   name      = "microcrm"
   namespace = kubernetes_namespace.env[each.key].metadata[0].name

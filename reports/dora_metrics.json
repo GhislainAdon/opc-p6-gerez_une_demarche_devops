@@ -1,0 +1,9 @@
+{
+  "window_days": 1,
+  "branch": "guide",
+  "pipelines_total": 5,
+  "deployment_frequency_per_week": 1.0,
+  "lead_time_median": "0.1 h",
+  "change_failure_rate_pct": 80.0,
+  "mttr": "0.6 h"
+}

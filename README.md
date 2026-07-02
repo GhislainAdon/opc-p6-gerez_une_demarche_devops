@@ -243,7 +243,9 @@ docker compose -f monitoring/elk/compose.yaml up -d   # Kibana : http://localhos
 ```
 
 Les conteneurs applicatifs envoient leurs logs à Logstash via le driver GELF
-(`--log-driver gelf --log-opt gelf-address=udp://localhost:12201`) ; Logstash
+(`--log-driver gelf --log-opt gelf-address=udp://<hôte>:12201`) ; sous Docker
+Desktop, utiliser l'**IP du conteneur Logstash** (`docker inspect orion-logstash`)
+car le driver s'exécute dans le démon et ne voit pas les ports publiés ; Logstash
 enrichit (composant, verbe/statut HTTP) et indexe dans `orion-logs-*` pour les
 dashboards Kibana.
 

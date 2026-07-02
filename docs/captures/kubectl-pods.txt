@@ -1,0 +1,6 @@
+dev           microcrm-back-9bbfdb8d6-6m552      1/1     Running   0              80s
+dev           microcrm-front-c96f5b6cb-4bd2r     1/1     Running   0              80s
+staging       microcrm-back-9bbfdb8d6-sm89z      1/1     Running   0              80s
+staging       microcrm-back-9bbfdb8d6-wpntk      1/1     Running   0              80s
+staging       microcrm-front-c96f5b6cb-n25fh     1/1     Running   0              80s
+staging       microcrm-front-c96f5b6cb-pzjdq     1/1     Running   0              80s

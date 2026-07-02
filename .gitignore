@@ -1,0 +1,22 @@
+# Secrets - never commit
+.env
+*.token
+
+# Build outputs
+back/build/
+back/.gradle/
+front/node_modules/
+front/dist/
+front/.angular/
+
+# IDE / OS
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
+
+# IaC state
+**/.terraform/
+*.tfstate
+*.tfstate.backup

@@ -4,6 +4,17 @@
 
 # Orion — Application Full-Stack (MicroCRM)
 
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/GhislainAdon/opc-p6-gerez_une_demarche_devops/tree/guide?quickstart=1)
+
+> **Tester dans un Codespace (gratuit)** : le bouton ci-dessus ouvre l'environnement complet
+> (Docker, Terraform, kubectl/Helm/Minikube, Java 17, Node 20, Python + Ansible) sur une machine
+> **4 vCPU / 16 Go RAM / 32 Go de stockage** — dans la limite du forfait gratuit GitHub
+> (120 heures-cœur/mois, soit ~30 h sur cette machine ; le stockage gratuit est de 15 Go-mois).
+> Pensez à arrêter le Codespace après usage. Tout le projet s'exécute dedans :
+> `docker compose up`, `terraform apply` (Minikube préinstallé), stack ELK, scripts.
+
+
+
 MicroCRM est l'application Full-Stack d'Orion. Ce dépôt contient son code source ainsi que la chaîne CI/CD complète (tests, qualité, sécurité, packaging, sauvegarde, déploiement, notifications) décrite ci-dessous.
 
 L'application MicroCRM est une implémentation simplifiée d'un ["CRM" (Customer Relationship Management)](https://fr.wikipedia.org/wiki/Gestion_de_la_relation_client). Les fonctionnalités sont limitées à la création, édition et la visualisations des individus liés à des organisations.

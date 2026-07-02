@@ -1,0 +1,41 @@
+{
+  "name": "orion-fullstack-devops",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu-22.04",
+  "hostRequirements": {
+    "cpus": 4,
+    "memory": "16gb",
+    "storage": "32gb"
+  },
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {
+      "moby": false
+    },
+    "ghcr.io/devcontainers/features/terraform:1": {},
+    "ghcr.io/devcontainers/features/kubectl-helm-minikube:1": {},
+    "ghcr.io/devcontainers/features/java:1": {
+      "version": "17",
+      "installGradle": false
+    },
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "20"
+    },
+    "ghcr.io/devcontainers/features/python:1": {
+      "version": "3.12"
+    }
+  },
+  "postCreateCommand": "pipx install --include-deps ansible || pip3 install --user ansible; echo 'Devcontainer ready — see README (Chaîne CI/CD & Déploiement continu)'",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-azuretools.vscode-docker",
+        "hashicorp.terraform",
+        "redhat.ansible",
+        "gitlab.gitlab-workflow"
+      ]
+    }
+  },
+  "forwardPorts": [8081, 8082, 9000, 5601, 9200, 30080, 30081],
+  "remoteEnv": {
+    "DEPLOY_HOST": "localhost"
+  }
+}

@@ -22,7 +22,9 @@ RUN ./gradlew --no-daemon build
 
 FROM caddy:2-alpine AS front
 
-RUN adduser -D -u 10001 webuser
+# Pull the latest patched Alpine packages (Trivy security gate)
+RUN apk upgrade --no-cache \
+    && adduser -D -u 10001 webuser
 
 COPY --from=front-build /src/dist/microcrm/browser /app/front
 COPY misc/docker/Caddyfile /etc/caddy/Caddyfile
@@ -40,7 +42,9 @@ CMD ["caddy", "run", "--config", "/etc/caddy/Caddyfile"]
 
 FROM eclipse-temurin:17-jre-alpine AS back
 
-RUN adduser -D -u 10001 spring
+# Pull the latest patched Alpine packages (Trivy security gate)
+RUN apk upgrade --no-cache \
+    && adduser -D -u 10001 spring
 
 COPY --from=back-build /src/build/libs/microcrm-0.0.1-SNAPSHOT.jar /app/back/microcrm.jar
 

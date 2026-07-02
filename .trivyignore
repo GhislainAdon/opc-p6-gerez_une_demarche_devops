@@ -1,4 +1,11 @@
 # CVE identifiers deliberately ignored by the Trivy gate.
 # Every entry must be justified and reviewed by the Ops team (Maïa).
-# Format: one CVE id per line, e.g.
-# CVE-2024-XXXXX  # <justification + review date>
+# Format: one CVE id per line with justification + review date.
+
+# --- front image (caddy:2-alpine) ---
+# Go stdlib CVEs embedded in the upstream caddy binary — no patched caddy
+# image published yet. Both are DoS-class issues on TLS/MIME parsing, front
+# is not internet-facing in the demo environment. Re-evaluate at each caddy
+# image release. Reviewed: 2026-07-02.
+CVE-2026-27145
+CVE-2026-42504

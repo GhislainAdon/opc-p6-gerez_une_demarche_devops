@@ -4,7 +4,7 @@
 
 # Orion — Application Full-Stack (MicroCRM)
 
-[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/GhislainAdon/opc-p6-gerez_une_demarche_devops/tree/guide?quickstart=1)
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/GhislainAdon/opc-p6-gerez_une_demarche_devops/tree/solution?quickstart=1)
 
 > **Tester dans un Codespace (gratuit)** : le bouton ci-dessus ouvre l'environnement complet
 > (Docker, Terraform, kubectl/Helm/Minikube, Java 17, Node 20, Python + Ansible) sur une machine
@@ -265,4 +265,4 @@ Les 4 métriques **DORA** sont calculées depuis l'API GitLab par
 
 | Script | But | Fonctionnement | Paramètres |
 |---|---|---|---|
-| `dora_metrics.py` | Mesure de la performance de livraison | Interroge l'API GitLab (pipelines + commits) et calcule : fréquence de déploiement/semaine, lead time médian commit→succès, taux d'échec des changements, MTTR (échec→succès suivant). Résultat affiché + `reports/dora_metrics.json`. | `--branch` (défaut `guide`), `--days` (défaut 30), `--project-id` ; env `GITLAB_TOKEN` |
+| `dora_metrics.py` | Mesure de la performance de livraison | Interroge l'API GitLab (pipelines + commits) et calcule : fréquence de déploiement/semaine, lead time médian commit→succès, taux d'échec des changements, MTTR (échec→succès suivant). Résultat affiché + `reports/dora_metrics.json`. | `--branch` (défaut `solution`), `--days` (défaut 30), `--project-id` ; env `GITLAB_TOKEN` |

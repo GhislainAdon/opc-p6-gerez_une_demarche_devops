@@ -29,7 +29,7 @@ variable "registry_token" {
 }
 
 variable "image_tag" {
-  description = "Image tag to deploy (e.g. guide-a1b2c3d4 from the CI pipeline)"
+  description = "Image tag to deploy (e.g. solution-a1b2c3d4 from the CI pipeline)"
   type        = string
   default     = "latest"
 }

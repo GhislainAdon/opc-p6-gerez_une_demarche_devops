@@ -7,7 +7,7 @@ Purpose : measure delivery performance for the performance report:
           - Change Failure Rate  : failed / total pipelines on the branch
           - MTTR                 : mean time between a failed pipeline and the
                                    next successful one
-Usage   : python3 scripts/dora_metrics.py [--branch guide] [--days 30]
+Usage   : python3 scripts/dora_metrics.py [--branch solution] [--days 30]
 Config  : GITLAB_TOKEN (env or .env file), GITLAB_PROJECT_ID (env, default from
           CI_PROJECT_ID) — token read from environment, never hard-coded.
 Output  : human-readable summary + reports/dora_metrics.json
@@ -50,7 +50,7 @@ def parse_ts(value: str) -> dt.datetime:
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--branch", default=os.environ.get("CI_COMMIT_REF_NAME", "guide"))
+    ap.add_argument("--branch", default=os.environ.get("CI_COMMIT_REF_NAME", "solution"))
     ap.add_argument("--days", type=int, default=30)
     ap.add_argument("--project-id", default=os.environ.get("GITLAB_PROJECT_ID") or os.environ.get("CI_PROJECT_ID", ""))
     args = ap.parse_args()

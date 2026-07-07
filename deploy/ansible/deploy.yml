@@ -1,7 +1,7 @@
 ---
 # deploy.yml — automated deployment of the Orion stack on the target host.
 #
-#   ansible-playbook -i inventory.ini deploy.yml -e image_tag=guide-a1b2c3d4
+#   ansible-playbook -i inventory.ini deploy.yml -e image_tag=solution-a1b2c3d4
 #
 # Chain: Terraform (namespaces + Helm releases on Minikube) → verification
 # that every pod reaches the Ready state → HTTP smoke test on the frontend.

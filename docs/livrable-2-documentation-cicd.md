@@ -279,7 +279,7 @@ de performance.
 
 ## 8. Annexes
 
-- Dépôt GitLab : `https://gitlab.com/adon88463114/opc-p6-gerez_une_demarche_devops` (branche `solution`)
+- Dépôt GitLab : `https://gitlab.com/openclassrooms7804126/opc-p6-gerez_une_demarche_devops` (branche `solution`)
 - `docs/01-veille-audit-recommandations.md` — audit, veille, recommandations (Modèle 1)
 - `docs/02-normalisation-plan-ci.md` — normalisation + plan de mise en œuvre (Modèle 2)
 - `docs/03-plan-tests-securite.md` — plan de tests et de sécurité détaillé

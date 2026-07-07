@@ -1,6 +1,6 @@
 # Default values — overridden per environment by values-dev.yaml / values-staging.yaml.
 image:
-  registry: registry.gitlab.com/adon88463114/opc-p6-gerez_une_demarche_devops
+  registry: registry.gitlab.com/openclassrooms7804126/opc-p6-gerez_une_demarche_devops
   tag: latest
   pullPolicy: IfNotPresent
   # For the private registry, create the secret first:

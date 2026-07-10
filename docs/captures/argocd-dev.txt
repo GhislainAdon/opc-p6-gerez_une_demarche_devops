@@ -1,0 +1,17 @@
+# Argo CD — état du déploiement continu (namespace dev)
+#   gitVersion: v1.34.1
+
+$ kubectl -n argocd get applications
+NAME           SYNC STATUS   HEALTH STATUS
+microcrm-dev   Synced        Healthy
+
+$ kubectl -n dev get pods,svc
+NAME                                      READY   STATUS    RESTARTS   AGE
+pod/microcrm-dev-back-578cdb7857-f8grl    1/1     Running   0          23m
+pod/microcrm-dev-front-66d4656fcc-ldtfr   1/1     Running   0          23m
+
+NAME                         TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)          AGE
+service/microcrm-dev-back    ClusterIP   10.106.100.161   <none>        8080/TCP         94m
+service/microcrm-dev-front   NodePort    10.97.235.190    <none>        8080:30080/TCP   94m
+
+# Images déployées (épinglées par gitops-release):

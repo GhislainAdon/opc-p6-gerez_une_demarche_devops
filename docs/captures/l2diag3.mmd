@@ -1,0 +1,13 @@
+flowchart LR
+  P((push dev/test/prod)) --> T1[test-back\nJUnit+JaCoCo] & T2[test-front\nKarma+lcov]
+  T1 & T2 --> Q[sonarqube\nquality gate bloquante]
+  T1 --> B1[build-back JAR] & DB[docker-back → registry]
+  T2 --> B2[build-front dist] & DF[docker-front → registry]
+  DB --> TR1[trivy-back\nbloquant HIGH/CRITICAL]
+  DF --> TR2[trivy-front\nbloquant HIGH/CRITICAL]
+  B1 & B2 --> BK[backup-artifacts\narchive horodatée]
+  TR1 & TR2 --> DS[deploy-smoke\nrun images + curl]
+  DS --> REL[gitops-release\npin tag + push]
+  REL --> N{notify}
+  N -->|succès| OK[Discord ✅ canal env]
+  N -->|échec| KO[Discord ❌ canal env]

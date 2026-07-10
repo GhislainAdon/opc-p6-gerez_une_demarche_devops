@@ -9,3 +9,9 @@
 # image release. Reviewed: 2026-07-02.
 CVE-2026-27145
 CVE-2026-42504
+# CVE-2026-39822 — Go stdlib os.Root symlink-following (HIGH), compiled into the
+# upstream caddy binary (Go 1.26.3); fixed in Go 1.26.5 but no patched caddy
+# image published yet. Front only serves static Angular assets (no symlinks in
+# /app/front) and is not internet-facing in the demo. Re-evaluate at each caddy
+# image release. Reviewed: 2026-07-10.
+CVE-2026-39822

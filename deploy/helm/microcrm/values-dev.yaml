@@ -1,4 +1,9 @@
-# Development environment (Minikube)
+# Development environment — Docker Desktop Kubernetes, namespace "dev".
+# image.registry/tag are pinned automatically by the GitOps release job
+# (scripts/gitops_release.sh) on every successful pipeline of the "dev" branch.
+image:
+  registry: registry.gitlab.com/openclassrooms7804126/opc-p6-gerez_une_demarche_devops
+  tag: dev-5ca80cae
 back:
   replicaCount: 1
 front:

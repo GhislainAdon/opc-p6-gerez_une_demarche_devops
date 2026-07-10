@@ -1,0 +1,29 @@
+# Argo CD Application — dev environment.
+# Tracks the "dev" branch and renders the microcrm Helm chart with values-dev.yaml
+# into the "dev" namespace. Automated sync + self-heal: whenever the GitOps
+# release job pins a new image tag on the dev branch, Argo CD deploys it.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: microcrm-dev
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://gitlab.com/openclassrooms7804126/opc-p6-gerez_une_demarche_devops.git
+    targetRevision: dev
+    path: deploy/helm/microcrm
+    helm:
+      valueFiles:
+        - values-dev.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: dev
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

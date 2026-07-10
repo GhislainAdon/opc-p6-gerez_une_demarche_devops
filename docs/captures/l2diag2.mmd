@@ -1,0 +1,28 @@
+flowchart TB
+  subgraph GitLab["GitLab (SaaS)"]
+    REPO[Dépôt Git\nbranches dev/test/prod] --> CI[Pipeline CI/CD]
+    CI --> REG[(Container Registry\nback / front : ref-sha)]
+    CI -->|"gitops-release: pin image tag [skip ci]"| REPO
+  end
+  subgraph Poste["Poste / hôte de démo (Docker Desktop)"]
+    SONAR[SonarQube] --- CF[cloudflared\nquick tunnel]
+    subgraph K8S["Kubernetes (Docker Desktop)"]
+      ARGO[Argo CD] -->|sync| NSdev
+      ARGO --> NStest
+      ARGO --> NSprod
+      subgraph NSdev["namespace dev"]
+        D1[front x1\nNodePort 30080] --> D2[back x1]
+      end
+      subgraph NStest["namespace test"]
+        T1[front x2\nNodePort 30081] --> T2[back x2]
+      end
+      subgraph NSprod["namespace prod"]
+        P1[front x2\nNodePort 30082] --> P2[back x2]
+      end
+    end
+    ELK["Stack ELK\n(Logstash GELF → ES → Kibana :5601)"]
+  end
+  CF -->|"SONAR_HOST_URL (https)"| CI
+  ARGO -->|"pull état déclaratif (Helm)"| REPO
+  REG -->|pull imagePullSecret| K8S
+  K8S -.logs GELF.-> ELK

@@ -1,0 +1,12 @@
+# Production environment — namespace "prod". 2 replicas per component.
+# image.registry/tag are pinned automatically by the GitOps release job.
+image:
+  registry: registry.gitlab.com/openclassrooms7804126/opc-p6-gerez_une_demarche_devops
+  tag: latest
+back:
+  replicaCount: 2
+front:
+  replicaCount: 2
+  service:
+    type: NodePort
+    nodePort: 30082

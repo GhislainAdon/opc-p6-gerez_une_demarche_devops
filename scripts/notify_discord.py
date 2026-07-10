@@ -5,7 +5,10 @@ Purpose : post the CI pipeline outcome to the team Discord channel so both
           Dev and Ops teams get real-time feedback without polling GitLab.
 Usage   : python3 scripts/notify_discord.py [status]
           `status` defaults to $CI_JOB_STATUS / "unknown".
-Config  : DISCORD_WEBHOOK_URL (masked GitLab CI/CD variable — never committed).
+Config  : the webhook is routed per environment branch. The script uses
+          DISCORD_WEBHOOK_URL_<BRANCH> (e.g. DISCORD_WEBHOOK_URL_DEV / _TEST /
+          _PROD) when it exists, and falls back to DISCORD_WEBHOOK_URL for any
+          other branch. All are masked GitLab CI/CD variables — never committed.
           All other fields are read from standard GitLab CI variables.
 Exit    : 0 on success or when the webhook is not configured (no-op),
           1 on HTTP error, so the notify job surfaces delivery problems.
@@ -18,6 +21,14 @@ import sys
 import urllib.request
 
 COLORS = {"success": 0x2ECC71, "failed": 0xE74C3C, "canceled": 0x95A5A6}
+
+
+def resolve_webhook() -> str:
+    """Pick the environment webhook (DISCORD_WEBHOOK_URL_<BRANCH>) if defined,
+    otherwise fall back to the generic DISCORD_WEBHOOK_URL."""
+    branch = os.environ.get("CI_COMMIT_REF_NAME", "")
+    key = "DISCORD_WEBHOOK_URL_" + branch.upper().replace("-", "_")
+    return os.environ.get(key) or os.environ.get("DISCORD_WEBHOOK_URL", "")
 
 
 def build_payload(status: str) -> dict:
@@ -46,9 +57,9 @@ def build_payload(status: str) -> dict:
 
 
 def main() -> int:
-    webhook = os.environ.get("DISCORD_WEBHOOK_URL", "")
+    webhook = resolve_webhook()
     if not webhook:
-        print("DISCORD_WEBHOOK_URL not set — skipping notification (no-op).")
+        print("No Discord webhook for this branch — skipping notification (no-op).")
         return 0
     status = (sys.argv[1] if len(sys.argv) > 1 else os.environ.get("CI_JOB_STATUS", "unknown")).lower()
     req = urllib.request.Request(

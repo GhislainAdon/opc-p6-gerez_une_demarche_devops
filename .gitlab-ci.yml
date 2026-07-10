@@ -1,27 +1,50 @@
-# Orion Full-Stack — CI/CD pipeline
+# Orion Full-Stack — CI/CD pipeline (GitOps)
+#
+# Branch model (sandbox environments, promoted left to right):
+#   solution --> dev --> test --> prod
+#   - solution : graded source of truth (runs CI, does NOT deploy)
+#   - dev/test/prod : environment branches. A push here runs the full pipeline
+#     and, on success, pins the freshly built image into the matching Helm
+#     values file (values-<env>.yaml) and pushes it back [skip ci]. Argo CD
+#     (running locally) detects the commit and deploys to namespace <env>.
+#     => No inbound access to the cluster is ever required.
 #
 # Stages:
+#   .pre     : promotion-guard  (enforce dev->test->prod on merge requests)
 #   test     : unit tests + coverage + dependency report (front & back)
 #   quality  : SonarQube static analysis with blocking quality gate
 #   package  : classic builds (artifacts) + Docker images pushed to the
 #              GitLab Container Registry, tagged <ref>-<short SHA>
 #   security : Trivy vulnerability scan of both images (blocking HIGH/CRITICAL)
 #   backup   : timestamped archive of the deployable artifacts (rollback support)
-#   deploy   : smoke deployment of the images + HTTP checks (manual for demo)
-#   notify   : Discord notification of the pipeline result (always runs)
+#   verify   : in-CI smoke deployment of the images + HTTP checks
+#   release  : GitOps — pin the image tag into values-<env>.yaml (dev/test/prod)
+#   notify   : Discord notification, routed to the environment's channel
 #
 # Required CI/CD variables (Settings > CI/CD > Variables, masked):
-#   SONAR_HOST_URL, SONAR_TOKEN   -> enable the quality stage
-#   DISCORD_WEBHOOK_URL           -> enable the notify stage
+#   SONAR_HOST_URL, SONAR_TOKEN         -> enable the quality stage
+#   GITOPS_PUSH_TOKEN (write_repository)-> enable the release stage
+#   DISCORD_WEBHOOK_URL_DEV/_TEST/_PROD -> per-environment notifications
+#   (DISCORD_WEBHOOK_URL is used as a fallback for any other branch)
 # $CI_REGISTRY_* variables are provided automatically by GitLab.
 
+workflow:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == "solution"'
+    - if: '$CI_COMMIT_BRANCH == "dev"'
+    - if: '$CI_COMMIT_BRANCH == "test"'
+    - if: '$CI_COMMIT_BRANCH == "prod"'
+
 stages:
+  - .pre
   - test
   - quality
   - package
   - security
   - backup
-  - deploy
+  - verify
+  - release
   - notify
 
 variables:
@@ -29,6 +52,23 @@ variables:
   BACK_IMAGE: $CI_REGISTRY_IMAGE/back:$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA
   FRONT_IMAGE: $CI_REGISTRY_IMAGE/front:$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA
   npm_config_cache: $CI_PROJECT_DIR/.npm
+
+# ----------------------------------------------------------- promotion
+
+# Enforce the promotion path on merge requests: prod accepts merges from
+# "test" only, test accepts merges from "dev" only. Branch protection alone
+# cannot express this, so a CI gate makes the rule explicit and demonstrable.
+promotion-guard:
+  image: alpine:3.20
+  stage: .pre
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event" && ($CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "prod" || $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "test")'
+  script:
+    - |
+      T="$CI_MERGE_REQUEST_TARGET_BRANCH_NAME"; S="$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME"
+      if [ "$T" = "prod" ] && [ "$S" != "test" ]; then echo "REJECTED: prod accepts merges from 'test' only (source was '$S')."; exit 1; fi
+      if [ "$T" = "test" ] && [ "$S" != "dev"  ]; then echo "REJECTED: test accepts merges from 'dev' only (source was '$S')."; exit 1; fi
+      echo "Promotion '$S' -> '$T' allowed."
 
 # ---------------------------------------------------------------- test
 
@@ -47,6 +87,7 @@ test-back:
     reports:
       junit: back/build/test-results/test/*.xml
     paths:
+      - back/build/classes/            # sonar.java.binaries — needed by the sonarqube job
       - back/build/reports/jacoco/test/jacocoTestReport.xml
       - reports/
 
@@ -84,6 +125,9 @@ sonarqube:
     key: sonar-$CI_COMMIT_REF_SLUG
     paths: [.sonar/cache]
   script:
+    # -Dsonar.qualitygate.wait=true blocks the pipeline until SonarQube returns
+    # the gate verdict: a failing gate (bug / vulnerability / coverage on new
+    # code / duplication) fails this job and stops the release.
     - sonar-scanner -Dsonar.qualitygate.wait=true
 
 # ------------------------------------------------------------- package
@@ -197,11 +241,13 @@ backup-artifacts:
     paths: [backups/]
     expire_in: 1 week
 
-# -------------------------------------------------------------- deploy
+# -------------------------------------------------------------- verify
 
+# In-CI smoke: boots both images and curls them. Independent of the cluster;
+# gates the GitOps release below.
 deploy-smoke:
   image: docker:27
-  stage: deploy
+  stage: verify
   needs: [trivy-back, trivy-front]
   services:
     - docker:27-dind
@@ -213,22 +259,43 @@ deploy-smoke:
   script:
     - bash scripts/deploy_demo.sh "$BACK_IMAGE" "$FRONT_IMAGE"
 
+# ------------------------------------------------------------- release
+
+# GitOps release: pin the just-built image into values-<env>.yaml and push it
+# back with [skip ci]. Argo CD (running on the local Docker Desktop cluster)
+# polls the branch and syncs the change into namespace <env>.
+gitops-release:
+  image: alpine:3.20
+  stage: release
+  # deploy-smoke gates deployability; sonarqube (optional so the pipeline still
+  # works when Sonar is not configured) gates on the quality gate: a red gate
+  # fails/omits sonarqube -> this job is skipped -> no release. The gate truly
+  # blocks the deployment, not just the pipeline status.
+  needs:
+    - deploy-smoke
+    - job: sonarqube
+      optional: true
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "test" || $CI_COMMIT_BRANCH == "prod"'
+  before_script:
+    - apk add --no-cache bash git yq
+  script:
+    - bash scripts/gitops_release.sh "$CI_COMMIT_BRANCH" "$CI_REGISTRY_IMAGE" "$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA"
+
 # -------------------------------------------------------------- notify
 
+# The notify script routes to DISCORD_WEBHOOK_URL_<BRANCH> (DEV/TEST/PROD),
+# falling back to DISCORD_WEBHOOK_URL for any other branch.
 notify-success:
   image: python:3.12-alpine
   stage: notify
-  rules:
-    - if: '$DISCORD_WEBHOOK_URL'
-      when: on_success
+  when: on_success
   script:
     - python3 scripts/notify_discord.py success
 
 notify-failure:
   image: python:3.12-alpine
   stage: notify
-  rules:
-    - if: '$DISCORD_WEBHOOK_URL'
-      when: on_failure
+  when: on_failure
   script:
     - python3 scripts/notify_discord.py failed

@@ -1,6 +1,12 @@
 # Secrets - never commit
 .env
 *.token
+*.secret
+# Local bootstrap secrets (GitLab admin token, webhooks, generated links).
+# The committed template is scripts/secret/bootstrap.example.sh
+scripts/secret/*
+!scripts/secret/bootstrap.example.sh
+!scripts/secret/.env.secret.example
 
 # Build outputs
 back/build/

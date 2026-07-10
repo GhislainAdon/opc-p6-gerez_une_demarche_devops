@@ -1,0 +1,27 @@
+# Argo CD Application — test environment.
+# Apply only once the "test" branch has content (promoted from dev).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: microcrm-test
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://gitlab.com/openclassrooms7804126/opc-p6-gerez_une_demarche_devops.git
+    targetRevision: test
+    path: deploy/helm/microcrm
+    helm:
+      valueFiles:
+        - values-test.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: test
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

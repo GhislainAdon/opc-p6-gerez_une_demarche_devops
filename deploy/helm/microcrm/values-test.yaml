@@ -1,0 +1,13 @@
+# Test/staging environment — namespace "test". 2 replicas per component to
+# validate resilience before promotion to prod.
+# image.registry/tag are pinned automatically by the GitOps release job.
+image:
+  registry: registry.gitlab.com/openclassrooms7804126/opc-p6-gerez_une_demarche_devops
+  tag: latest
+back:
+  replicaCount: 2
+front:
+  replicaCount: 2
+  service:
+    type: NodePort
+    nodePort: 30081

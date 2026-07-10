@@ -1,0 +1,27 @@
+# Argo CD Application — prod environment.
+# Apply only once the "prod" branch has content (promoted from test).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: microcrm-prod
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://gitlab.com/openclassrooms7804126/opc-p6-gerez_une_demarche_devops.git
+    targetRevision: prod
+    path: deploy/helm/microcrm
+    helm:
+      valueFiles:
+        - values-prod.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: prod
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

@@ -1,0 +1,8 @@
+flowchart LR
+  FEAT["feat/sujet"] -->|MR + pipeline vert + 1 approbation| SOL[solution]
+  SOL -->|merge| DEV[dev]
+  DEV -->|MR promotion| TEST[test]
+  TEST -->|MR promotion| PROD[prod]
+  DEV -.déploie.-> NSDEV[(namespace dev)]
+  TEST -.déploie.-> NSTEST[(namespace test)]
+  PROD -.déploie.-> NSPROD[(namespace prod)]

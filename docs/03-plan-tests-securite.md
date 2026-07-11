@@ -47,7 +47,7 @@ bloquants, avec un retour aux équipes en quelques minutes.
 
 - **CI éphémère** : conteneurs de jobs GitLab (gradle, cypress/browsers, docker:dind) — jetables, reproductibles.
 - **Déploiement smoke** : réseau Docker éphémère créé/détruit par `deploy_demo.sh` (en CI via dind, ou sur poste).
-- **Démo/staging** *(partie 2)* : cluster Minikube provisionné par Terraform/Ansible.
+- **Environnements dev/test/prod** *(partie 2)* : Kubernetes local (Docker Desktop ou Minikube), déploiement continu **GitOps par Argo CD** ; Terraform/Ansible pour le provisionnement/portabilité.
 
 ## 3. Processus d'intégration continue
 
@@ -132,8 +132,8 @@ Secrets en variables GitLab **masquées et protégées**, jamais dans le dépôt
 
 `npm audit` + arbre Gradle en rapport à chaque push (`check_deps.sh`) ; hotspots
 sécurité SonarQube revus en MR ; dépendances épinglées (`package-lock.json`,
-versions Gradle explicites) ; branche `master` protégée (MR + approbation
-obligatoires).
+versions Gradle explicites) ; branches `test`/`prod` protégées et promotion
+contrôlée `dev → test → prod` (job `promotion-guard`), MR + approbation obligatoires.
 
 ### 6.4 Sécurisation du pipeline CI
 

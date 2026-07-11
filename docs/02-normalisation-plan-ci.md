@@ -43,7 +43,7 @@ sprint. Équipes : 4 Dev (fortes en Angular, débutantes en Java/Gradle/JUnit),
 
 ### 2.3 Gestion des versions
 
-- **Modèle de branches** : GitLab Flow simplifié — `master` (production/baseline, protégée), branches de fonctionnalité `feat/<sujet>` courtes (< 3 jours), intégration par merge request.
+- **Modèle de branches** : intégration par branches de fonctionnalité `feat/<sujet>` courtes (< 3 jours) fusionnées dans **`solution`** (source de vérité) par merge request ; **livraison par branches d'environnement** `dev → test → prod` (GitOps), `test`/`prod` protégées. `master` conserve l'état baseline.
 - **Commits** : Conventional Commits (`feat:`, `fix:`, `chore:`, `docs:`, `ci:`) — prépare l'automatisation future des releases (semantic versioning).
 - **Tags d'images** : `<branche>-<SHA court>` en continu.
 
@@ -55,9 +55,9 @@ sprint. Équipes : 4 Dev (fortes en Angular, débutantes en Java/Gradle/JUnit),
 
 ### 2.5 Intégration continue
 
-- **Fréquence** : pipeline à chaque push ; intégration sur `master` au moins quotidienne (fin de l'effet tunnel de fin de sprint).
+- **Fréquence** : pipeline à chaque push ; intégration sur `solution` au moins quotidienne (fin de l'effet tunnel de fin de sprint).
 - **Critères de réussite** : compilation OK, 100 % des tests verts, quality gate SonarQube passée, scan Trivy sans CVE HIGH/CRITICAL.
-- **Outil** : GitLab CI (runners SaaS), stages `verify → test → quality → package → security → notify`.
+- **Outil** : GitLab CI (runners SaaS), stages `.pre` (promotion-guard) `→ test → quality → package → security → backup → verify → release` (GitOps) `→ notify`.
 
 ### 2.6 Tests
 
@@ -108,14 +108,14 @@ puis étendre au CD (conteneurisation orchestrée, IaC, monitoring) au sprint su
 - **Livrables** : `compose.yaml` avec PostgreSQL, playbook `deploy.yml`, job `deploy:demo` manuel.
 
 #### Étape E — Extension CD (partie 2 de la mission)
-- **Description** : orchestration Kubernetes/Helm (Minikube), IaC Terraform + Ansible, monitoring ELK + indicateurs DORA, optimisation des processus.
+- **Description** : orchestration Kubernetes/Helm (Docker Desktop, option locale ; Minikube équivalent), **déploiement continu GitOps par Argo CD** (branches dev/test/prod), IaC Terraform + Ansible, monitoring ELK + indicateurs DORA, optimisation des processus.
 - **Responsables** : Expert DevOps ; équipe Ops en binôme (montée en compétence K8s).
-- **Livrables** : charts Helm, code Terraform/Ansible versionnés, stack ELK opérationnelle, rapport de performance.
+- **Livrables** : charts Helm, `Application` Argo CD par environnement, code Terraform/Ansible versionnés, stack ELK opérationnelle, rapport de performance.
 
 ### 3.3 Ressources nécessaires
 
 - **Humaines** : 1 Expert DevOps (plein temps sur la mission), relais leads Dev/Ops (~10 % de leur temps pour revues et validation).
-- **Techniques** : GitLab SaaS (runners partagés + Container Registry, offre existante), 1 hôte Docker pour SonarQube (2 vCPU / 4 Go RAM), Minikube sur poste pour l'étape E — **aucun coût de licence** (outils open source / éditions Community).
+- **Techniques** : GitLab SaaS (runners partagés + Container Registry, offre existante), 1 hôte Docker pour SonarQube (2 vCPU / 4 Go RAM ; exposé à la CI par tunnel Cloudflare en option locale), Kubernetes local (Docker Desktop ou Minikube) + Argo CD pour l'étape E — **aucun coût de licence** (outils open source / éditions Community).
 - **Budget** : temps homme uniquement ; pas d'achat d'outillage.
 
 ### 3.4 Calendrier prévisionnel
@@ -136,7 +136,7 @@ puis étendre au CD (conteneurisation orchestrée, IaC, monitoring) au sprint su
 | Quality gate trop stricte → blocage de l'équipe Dev junior | Moyenne | Frustration, contournement | Seuils progressifs (60 % → 80 %), période d'observation de 2 semaines avant mode bloquant |
 | Faux positifs Trivy sur images de base | Moyenne | MR bloquées à tort | Fichier `.trivyignore` revu par Maïa, mise à jour régulière des images de base |
 | SonarQube indisponible (hôte unique) | Faible | Perte de la gate | Job `allow_failure` temporaire documenté + redémarrage conteneur scripté |
-| Compétences K8s limitées (étape E) | Haute | Retard partie 2 | Option locale Minikube (sans coût), binômes Ops + documentation pas-à-pas |
+| Compétences K8s limitées (étape E) | Haute | Retard partie 2 | Option locale (Docker Desktop/Minikube) sans coût, GitOps Argo CD (déclaratif), binômes Ops + documentation pas-à-pas |
 
 ## 4. Conclusion
 

@@ -44,6 +44,33 @@ PROJECT_ENC=$(printf '%s' "$GITLAB_PROJECT" | sed 's|/|%2F|g')
 
 log() { printf '\n\033[1;36m==> %s\033[0m\n' "$*"; }
 
+# ---- 0. Remise à zéro des branches d'environnement (démo propre) ----------
+# Réinitialise dev/test/prod sur "master" (état baseline, exercice non traité)
+# via l'API GitLab : la démo repart d'un état vierge, puis on merge
+# solution -> dev en direct pour montrer la pipeline. Mets RESET_DEMO=0 pour
+# sauter cette étape (ex. si tu veux conserver l'état courant de dev).
+if [ "${RESET_DEMO:-1}" = "1" ]; then
+  log "Réinitialisation des branches d'environnement sur master (démo propre)"
+  reset_env_branch() {
+    local br="$1"
+    # supprime la branche si elle existe (ignore si protégée/inexistante)…
+    curl -s -o /dev/null -X DELETE \
+      "$API/projects/$PROJECT_ENC/repository/branches/$br" \
+      --header "PRIVATE-TOKEN: $GITLAB_TOKEN" || true
+    # …puis la recrée à partir de master.
+    local code
+    code=$(curl -s -o /dev/null -w "%{http_code}" -X POST \
+      "$API/projects/$PROJECT_ENC/repository/branches?branch=$br&ref=master" \
+      --header "PRIVATE-TOKEN: $GITLAB_TOKEN")
+    echo "  $br -> baseline master  [HTTP $code]"
+  }
+  for br in dev test prod; do reset_env_branch "$br"; done
+  # Cluster propre : retire l'app Argo CD dev (recréée plus bas). Elle se
+  # (re)déploiera pour de vrai au premier merge solution -> dev pendant la démo.
+  kubectl delete -f deploy/argocd/application-dev.yaml --ignore-not-found >/dev/null 2>&1 || true
+  kubectl -n dev delete deploy,svc --all >/dev/null 2>&1 || true
+fi
+
 # ---- 1. SonarQube ---------------------------------------------------------
 log "Starting SonarQube on :$SONAR_PORT"
 if ! docker ps -a --format '{{.Names}}' | grep -qx sonarqube; then

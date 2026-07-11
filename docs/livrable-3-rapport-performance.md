@@ -54,7 +54,7 @@ Analyse SonarQube du **11/07/2026** — projet `orion-fullstack`, 960 lignes de 
 | **Couverture backend (JaCoCo)** | **56,4 %** de lignes (42/70 lignes couvertes sur le code métier `microcrm`) |
 | **Couverture frontend** | **≈ 0 %** remontée dans SonarQube — le rapport `lcov` n'est pas encore correctement ingéré (chemin `sonar.javascript.lcov.reportPaths`) ; **point d'amélioration identifié** (§7) |
 | **Couverture globale (SonarQube)** | **24,4 %** de lignes — tirée vers le bas par le front non comptabilisé |
-| Analyse statique (dette) | 2 bugs, 1 vulnérabilité, 36 code smells, 0 hotspot non revu, duplication **2,5 %** (< 3 %) |
+| Analyse statique (SonarQube) | Fiabilité 18 issues (note D), Sécurité 1 (B), Maintenabilité 28 (A), 0 hotspot, duplication **2,5 %** (< 3 %) sur 960 lignes |
 | Smoke test de déploiement | ✅ en CI (dind) **et** cluster : services `HTTP 200` |
 | Déploiement Kubernetes (Argo CD) | ✅ namespace `dev` : `microcrm-dev-back` + `-front` `Running 1/1`, front `HTTP 200` sur `:30080`, application Argo CD **Synced + Healthy** |
 
@@ -100,9 +100,11 @@ fenêtre 5 min) :
 
 ![Règle d'alerte Kibana](captures/kibana-alerte.png)
 
-**SonarQube** — quality gate **PASSED** ; métriques d'analyse (960 lignes) : 2 bugs,
-1 vulnérabilité, 36 code smells, 0 hotspot non revu, duplication 2,5 %, couverture
-backend 56,4 % (détail au §3, mesuré via l'API SonarQube).
+**Dashboard SonarQube** — quality gate **PASSED** (Overall Code) : Fiabilité 18
+issues (D), Sécurité 1 (B), Maintenabilité 28 (A), 0 hotspot, couverture 24,4 %
+(backend 56,4 %), duplication 2,5 %, sur 960 lignes :
+
+![Dashboard SonarQube — Orion Full-Stack, quality gate Passed](captures/sonarqube-dashboard.png)
 
 **Argo CD** — application `microcrm-dev` **Synced/Healthy**, déploiement continu
 depuis Git (preuve texte `captures/argocd-dev.txt`) :

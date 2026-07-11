@@ -100,10 +100,9 @@ fenêtre 5 min) :
 
 ![Règle d'alerte Kibana](captures/kibana-alerte.png)
 
-**Dashboard SonarQube** (quality gate PASSED — 2 bugs, 1 vulnérabilité, 36 code
-smells, 0 hotspot non revu, duplication 2,5 %) :
-
-![Dashboard SonarQube](captures/sonarqube-dashboard.png)
+**SonarQube** — quality gate **PASSED** ; métriques d'analyse (960 lignes) : 2 bugs,
+1 vulnérabilité, 36 code smells, 0 hotspot non revu, duplication 2,5 %, couverture
+backend 56,4 % (détail au §3, mesuré via l'API SonarQube).
 
 **Argo CD** — application `microcrm-dev` **Synced/Healthy**, déploiement continu
 depuis Git (preuve texte `captures/argocd-dev.txt`) :

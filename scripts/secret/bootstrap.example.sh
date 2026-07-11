@@ -44,27 +44,23 @@ PROJECT_ENC=$(printf '%s' "$GITLAB_PROJECT" | sed 's|/|%2F|g')
 
 log() { printf '\n\033[1;36m==> %s\033[0m\n' "$*"; }
 
-# ---- 0. Remise à zéro des branches d'environnement (démo propre) ----------
-# Réinitialise dev/test/prod sur "master" (état baseline, exercice non traité)
-# via l'API GitLab : la démo repart d'un état vierge, puis on merge
-# solution -> dev en direct pour montrer la pipeline. Mets RESET_DEMO=0 pour
-# sauter cette étape (ex. si tu veux conserver l'état courant de dev).
+# ---- 0. Remise à zéro de la branche dev (démo propre) ---------------------
+# Réinitialise "dev" sur "master" (état baseline, exercice non traité) via
+# l'API GitLab : la démo repart d'un dev vierge, puis on merge solution -> dev
+# en direct pour montrer la pipeline. test/prod sont des branches PROTÉGÉES
+# (figuration de la promotion dev -> test -> prod) et ne sont pas touchées.
+# Mets RESET_DEMO=0 pour conserver l'état courant de dev.
 if [ "${RESET_DEMO:-1}" = "1" ]; then
-  log "Réinitialisation des branches d'environnement sur master (démo propre)"
-  reset_env_branch() {
-    local br="$1"
-    # supprime la branche si elle existe (ignore si protégée/inexistante)…
-    curl -s -o /dev/null -X DELETE \
-      "$API/projects/$PROJECT_ENC/repository/branches/$br" \
-      --header "PRIVATE-TOKEN: $GITLAB_TOKEN" || true
-    # …puis la recrée à partir de master.
-    local code
-    code=$(curl -s -o /dev/null -w "%{http_code}" -X POST \
-      "$API/projects/$PROJECT_ENC/repository/branches?branch=$br&ref=master" \
-      --header "PRIVATE-TOKEN: $GITLAB_TOKEN")
-    echo "  $br -> baseline master  [HTTP $code]"
-  }
-  for br in dev test prod; do reset_env_branch "$br"; done
+  log "Réinitialisation de la branche dev sur master (démo propre)"
+  # supprime dev si elle existe (branche non protégée)…
+  curl -s -o /dev/null -X DELETE \
+    "$API/projects/$PROJECT_ENC/repository/branches/dev" \
+    --header "PRIVATE-TOKEN: $GITLAB_TOKEN" || true
+  # …puis la recrée à partir de master.
+  code=$(curl -s -o /dev/null -w "%{http_code}" -X POST \
+    "$API/projects/$PROJECT_ENC/repository/branches?branch=dev&ref=master" \
+    --header "PRIVATE-TOKEN: $GITLAB_TOKEN")
+  echo "  dev -> baseline master  [HTTP $code]"
   # Cluster propre : retire l'app Argo CD dev (recréée plus bas). Elle se
   # (re)déploiera pour de vrai au premier merge solution -> dev pendant la démo.
   kubectl delete -f deploy/argocd/application-dev.yaml --ignore-not-found >/dev/null 2>&1 || true

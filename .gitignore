@@ -27,3 +27,8 @@ Thumbs.db
 *.tfstate
 *.tfstate.backup
 .gstack/
+
+# Python bytecode / Gradle bin (ne pas versionner)
+__pycache__/
+*.pyc
+back/bin/

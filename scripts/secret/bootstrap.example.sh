@@ -70,8 +70,14 @@ fi
 # ---- 1. SonarQube ---------------------------------------------------------
 log "Starting SonarQube on :$SONAR_PORT"
 if ! docker ps -a --format '{{.Names}}' | grep -qx sonarqube; then
+  # Heaps réduits : indispensable sur un poste chargé (K8s + Argo CD + runner) —
+  # sinon SonarQube (Elasticsearch inclus) sature la RAM et le moteur Docker tombe.
   docker run -d --name sonarqube -p "${SONAR_PORT}:9000" \
-    -e SONAR_ES_BOOTSTRAP_CHECKS_DISABLE=true sonarqube:community
+    -e SONAR_ES_BOOTSTRAP_CHECKS_DISABLE=true \
+    -e SONAR_SEARCH_JAVAADDITIONALOPTS="-Xms512m -Xmx512m" \
+    -e SONAR_WEB_JAVAOPTS="-Xmx512m" \
+    -e SONAR_CE_JAVAOPTS="-Xmx512m" \
+    sonarqube:community
 else
   docker start sonarqube >/dev/null
 fi

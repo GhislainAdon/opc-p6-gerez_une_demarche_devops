@@ -16,6 +16,7 @@
 #   package  : classic builds (artifacts) + Docker images pushed to the
 #              GitLab Container Registry, tagged <ref>-<short SHA>
 #   security : Trivy vulnerability scan of both images (blocking HIGH/CRITICAL)
+#              + gitleaks secrets scan of the git history (blocking, allowlisted)
 #   backup   : timestamped archive of the deployable artifacts (rollback support)
 #   verify   : in-CI smoke deployment of the images + HTTP checks
 #   release  : GitOps — pin the image tag into values-<env>.yaml (dev/test/prod)
@@ -226,6 +227,27 @@ trivy-front:
   artifacts:
     when: always
     paths: [reports/trivy-front.txt]
+
+# Secrets scan: audits the whole git history for leaked credentials. Legitimate
+# paths (example templates, gitignored local secrets) are allowlisted in
+# .gitleaks.toml. Any real secret NOT excluded fails the job; the report is
+# always kept as an artifact (showable to the evaluator). needs: [] -> runs
+# immediately (fail-fast), it only needs the source.
+gitleaks:
+  image:
+    name: zricethezav/gitleaks:latest
+    entrypoint: [""]
+  stage: security
+  needs: []
+  variables:
+    GIT_DEPTH: "0"   # full history scan
+  script:
+    - mkdir -p reports
+    - gitleaks detect --source . --config .gitleaks.toml --no-banner --redact
+      --report-format json --report-path reports/gitleaks.json --exit-code 1
+  artifacts:
+    when: always
+    paths: [reports/gitleaks.json]
 
 # -------------------------------------------------------------- backup
 

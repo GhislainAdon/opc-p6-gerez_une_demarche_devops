@@ -20,7 +20,7 @@ releases/rollback. Elle sert de référence unique aux équipes Dev et Ops.
 | CI/CD | GitLab CI (runners SaaS) | Orchestration du pipeline (9 stages) |
 | Qualité | SonarQube Community | Analyse statique Java + TypeScript, quality gate bloquante |
 | Exposition | Cloudflare Tunnel (`cloudflared`) | Expose le SonarQube local aux runners GitLab, sans ouvrir de port entrant |
-| Sécurité | Trivy | Scan CVE des images, bloquant HIGH/CRITICAL |
+| Sécurité | Trivy + gitleaks | Scan CVE des images (bloquant HIGH/CRITICAL) + scan de secrets de l'historique Git (bloquant) |
 | Conteneurs | Docker + GitLab Container Registry | Images non-root taguées `<branche>-<SHA>`, registre interne |
 | Orchestration | Kubernetes (Docker Desktop) + Helm | Déploiements dev/test/prod, probes, réplicas |
 | **CD / GitOps** | **Argo CD** | Réconciliation continue du cluster avec l'état Git (pull), sync auto + self-heal |
@@ -250,6 +250,7 @@ post-livraison des Ops est supprimé, l'échec est détecté en minutes.
 | Outil | Contrôle | Politique |
 |---|---|---|
 | Trivy | CVE des images (OS + librairies embarquées) | Bloquant HIGH/CRITICAL, exceptions via `.trivyignore` justifié et revu |
+| gitleaks | Secrets dans l'historique Git (jetons, mots de passe) | Bloquant ; chemins légitimes (gabarits, `.env.secret` gitignoré) allowlistés dans `.gitleaks.toml` ; rapport en artefact |
 | SonarQube | Bugs, hotspots sécurité, dette | Quality gate bloquante en MR |
 | `check_deps.sh` | `npm audit` + arbre Gradle | Rapport d'observation en artefact |
 | Dockerfile | Utilisateurs **non-root** (UID 10001), images de base épinglées, `apk upgrade`, 1 processus/conteneur | Revue obligatoire |

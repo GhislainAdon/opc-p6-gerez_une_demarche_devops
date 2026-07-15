@@ -177,7 +177,7 @@ Le pipeline s'exécute à chaque push. Chaque image publiée est taguée
 | `test` | `test-back`, `test-front` | Tests unitaires (JUnit, Karma) + couverture (JaCoCo, lcov) + rapport de dépendances (`scripts/check_deps.sh`). Rapports JUnit publiés dans GitLab. |
 | `quality` | `sonarqube` | Analyse statique Java + TypeScript, **quality gate bloquante** (`sonar.qualitygate.wait=true`). Activé quand `SONAR_HOST_URL`/`SONAR_TOKEN` sont définis. |
 | `package` | `build-back`, `build-front`, `docker-back`, `docker-front` | Artefacts classiques (JAR, bundle Angular) + images Docker poussées au **Container Registry** GitLab. |
-| `security` | `trivy-back`, `trivy-front` | Scan de vulnérabilités des images, **bloquant** sur CVE HIGH/CRITICAL (exceptions justifiées dans `.trivyignore`). |
+| `security` | `trivy-back`, `trivy-front`, `gitleaks` | Scan de vulnérabilités des images, **bloquant** sur CVE HIGH/CRITICAL (exceptions justifiées dans `.trivyignore`). **`gitleaks`** audite l'historique Git à la recherche de secrets (**bloquant**, chemins légitimes allowlistés dans `.gitleaks.toml`). Rapports Trivy/gitleaks conservés en **artefacts**. |
 | `backup` | `backup-artifacts` | Archive horodatée des artefacts déployables (`scripts/backup.sh`) — support de rollback. |
 | `verify` | `deploy-smoke` | Boot des 2 images + vérification HTTP en CI (`scripts/deploy_demo.sh`) — indépendant du cluster, conditionne la release. |
 | `release` | `gitops-release` | **GitOps** : épingle le tag image dans `values-<env>.yaml` et pousse `[skip ci]` (`scripts/gitops_release.sh`). Uniquement sur `dev`/`test`/`prod`. Argo CD déploie. |

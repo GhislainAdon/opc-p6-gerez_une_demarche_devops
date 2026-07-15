@@ -1,0 +1,23 @@
+# Configuration gitleaks — audit des secrets du dépôt (job CI `gitleaks`).
+# Étend les règles par défaut de gitleaks et déclare une allowlist pour les
+# chemins LÉGITIMES : fichiers d'exemple/gabarits (valeurs factices) et fichier
+# de secrets local gitignoré. Tout secret RÉEL hors de cette liste fait échouer
+# le job et est reporté dans l'artefact reports/gitleaks.json.
+title = "Orion — gitleaks"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Chemins légitimes : gabarits d'exemple et secrets locaux gitignorés"
+paths = [
+  '''scripts/secret/\.env\.secret$''',          # secrets locaux (gitignoré, jamais commité)
+  '''scripts/secret/\.env\.secret\.example$''', # gabarit avec valeurs factices
+  '''scripts/secret/bootstrap\.example\.sh$''', # gabarit (placeholders glpat-xxxx…)
+  '''(^|/)\.env\.example$''',                    # gabarit d'environnement local
+]
+# Valeurs factices explicitement tolérées (placeholders des gabarits).
+regexes = [
+  '''glpat-xxxxxxxxxxxxxxxxxxxx''',
+  '''gitlab\+deploy-token-xxxxx''',
+]

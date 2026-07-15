@@ -43,7 +43,7 @@ rejouable : `python scripts/dora_metrics.py --branch dev --days 30`).
 
 ## 3. Résultats des tests et couverture (mesures réelles SonarQube)
 
-Analyse SonarQube du **11/07/2026** — projet `orion-fullstack`, 960 lignes de code
+Analyse SonarQube du **15/07/2026** — projet `orion-fullstack`, 960 lignes de code
 (Java 226, TypeScript 332, HTML 401) :
 
 | Contrôle | Résultat mesuré |
@@ -51,16 +51,18 @@ Analyse SonarQube du **11/07/2026** — projet `orion-fullstack`, 960 lignes de 
 | **Quality gate** | ✅ **PASSED** (condition « Sonar way » : 0 nouvelle violation sur le code neuf) |
 | Tests backend (JUnit 5, unitaires + intégration JPA/REST) | ✅ verts à chaque pipeline (rapports JUnit publiés dans GitLab) |
 | Tests frontend (Karma/Jasmine, ChromeHeadless) | ✅ verts à chaque pipeline |
-| **Couverture backend (JaCoCo)** | **56,4 %** de lignes (42/70 lignes couvertes sur le code métier `microcrm`) |
-| **Couverture frontend** | **≈ 0 %** remontée dans SonarQube — le rapport `lcov` n'est pas encore correctement ingéré (chemin `sonar.javascript.lcov.reportPaths`) ; **point d'amélioration identifié** (§7) |
-| **Couverture globale (SonarQube)** | **24,4 %** de lignes — tirée vers le bas par le front non comptabilisé |
-| Analyse statique (SonarQube) | Fiabilité 18 issues (note D), Sécurité 1 (B), Maintenabilité 28 (A), 0 hotspot, duplication **2,5 %** (< 3 %) sur 960 lignes |
+| **Couverture backend (JaCoCo)** | **56,4 %** de lignes (code métier `microcrm`) |
+| **Couverture frontend (lcov)** | **27,0 %** de lignes (statements 33 %, fonctions 29 %) — désormais **ingérée** dans SonarQube |
+| **Couverture globale (SonarQube)** | **37,4 %** de lignes (41,1 % en couverture de lignes, 190 lignes à couvrir) |
+| Analyse statique (SonarQube) | Fiabilité 18 issues (note D), Sécurité 1 (B), Maintenabilité 42 (A), 0 hotspot, duplication **2,5 %** (< 3 %) sur 960 lignes |
 | Smoke test de déploiement | ✅ en CI (dind) **et** cluster : services `HTTP 200` |
 | Déploiement Kubernetes (Argo CD) | ✅ namespace `dev` : `microcrm-dev-back` + `-front` `Running 1/1`, front `HTTP 200` sur `:30080`, application Argo CD **Synced + Healthy** |
 
 **Lecture honnête** : la couverture backend (56,4 %) est proche de la cible 60 % ;
-la couverture frontend n'est pas encore reflétée dans SonarQube (intégration `lcov` à
-finaliser). C'est un **écart assumé et tracé**, pas masqué — cf. recommandation §7.1.
+la couverture frontend (27,0 %) est maintenant **correctement remontée** dans
+SonarQube (reporter `lcovonly` ajouté à Karma). La couverture globale (37,4 %) est
+mesurée et non plus déclarative — elle reste sous les cibles (progressivité assumée,
+cf. §7.1), mais elle est **réelle et suivie**.
 
 ## 4. Sécurité — deux cas réels traités par la chaîne
 
@@ -101,8 +103,8 @@ fenêtre 5 min) :
 ![Règle d'alerte Kibana](captures/kibana-alerte.png)
 
 **Dashboard SonarQube** — quality gate **PASSED** (Overall Code) : Fiabilité 18
-issues (D), Sécurité 1 (B), Maintenabilité 28 (A), 0 hotspot, couverture 24,4 %
-(backend 56,4 %), duplication 2,5 %, sur 960 lignes :
+issues (D), Sécurité 1 (B), Maintenabilité 42 (A), 0 hotspot, couverture **37,4 %**
+(backend 56,4 %, frontend 27,0 %), duplication 2,5 %, sur 960 lignes :
 
 ![Dashboard SonarQube — Orion Full-Stack, quality gate Passed](captures/sonarqube-dashboard.png)
 
@@ -137,9 +139,10 @@ CI/CD du dépôt GitLab.
 
 ## 7. Recommandations d'amélioration continue
 
-1. **Finaliser la couverture frontend dans SonarQube** : corriger le chemin
-   `sonar.javascript.lcov.reportPaths` pour que la couverture Angular (aujourd'hui
-   0 % remonté) soit comptabilisée, puis relever les seuils par paliers (60 → 80 %).
+1. **Relever la couverture par paliers** : la couverture front est désormais
+   ingérée (reporter Karma `lcovonly`) — back 56,4 %, front 27,0 %, global 37,4 %.
+   Objectif : remonter progressivement vers les cibles (60 → 80 %) en ajoutant des
+   tests, front en priorité (composants peu couverts).
 2. **SonarQube hébergé** (au lieu du tunnel Cloudflare depuis un poste) pour une
    disponibilité permanente de la gate, et **runner self-hosted** (vitesse/coût).
 3. **Releases sémantiques** : brancher semantic-release (Conventional Commits en place).

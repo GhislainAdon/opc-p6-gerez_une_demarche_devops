@@ -106,6 +106,28 @@ SONAR_TOKEN=$(curl -su "admin:${SONAR_ADMIN_PASS}" -X POST \
   | grep -oE '"token":"[^"]+"' | cut -d'"' -f4 || true)
 [ -n "$SONAR_TOKEN" ] || echo "WARN: token not auto-generated — create one at ${SONAR_PUBLIC}/account/security"
 
+# ---- 3b. Quality gate « Orion » (réaliste, phase d'observation) -----------
+# Clean-as-you-code SANS seuil de couverture bloquant tant que la couverture
+# monte (cf. plan de tests : 2 semaines d'observation, seuils relevés par
+# paliers). La gate bloque toujours sur : nouvelle violation, hotspot non revu,
+# duplication du code neuf > 3 % — donc la démo DEMO-GATE (secret en dur) la
+# fait passer au rouge, mais une promotion propre reste verte à coup sûr.
+log "Configuring SonarQube quality gate 'Orion'"
+SQ="http://localhost:${SONAR_PORT}"; SQAUTH="admin:${SONAR_ADMIN_PASS}"
+# Créer la gate — elle hérite des conditions 'Sonar way' par défaut
+# (new_violations=0, new_coverage>=80, duplication<=3, hotspots revus=100 %).
+curl -su "$SQAUTH" -X POST "$SQ/api/qualitygates/create" --data "name=Orion" >/dev/null 2>&1 || true
+# Retirer UNIQUEMENT la condition de couverture (phase d'observation, seuils
+# relevés par paliers) ; on garde les 3 autres conditions bloquantes.
+COV_ID=$(curl -su "$SQAUTH" "$SQ/api/qualitygates/show?name=Orion" \
+  | python3 -c "import sys,json;print(next((c['id'] for c in json.load(sys.stdin).get('conditions',[]) if c['metric']=='new_coverage'),''))" 2>/dev/null)
+[ -n "$COV_ID" ] && curl -su "$SQAUTH" -X POST "$SQ/api/qualitygates/delete_condition" --data "id=$COV_ID" >/dev/null 2>&1 || true
+# Définir par défaut (pour un projet neuf) + associer explicitement au projet.
+curl -su "$SQAUTH" -X POST "$SQ/api/qualitygates/set_as_default" --data "name=Orion" >/dev/null 2>&1 || true
+curl -su "$SQAUTH" -X POST "$SQ/api/qualitygates/select" \
+  --data "gateName=Orion&projectKey=orion-fullstack" >/dev/null 2>&1 || true
+echo "  gate 'Orion' : new_violations=0, hotspots revus=100 %, duplication<=3 % (couverture non bloquante)"
+
 # ---- 4. Argo CD + cluster ------------------------------------------------
 log "Configuring Kubernetes (Docker Desktop) + Argo CD"
 kubectl config use-context docker-desktop

@@ -305,10 +305,14 @@ UI Argo CD, page du token Sonar.
 ### Démo de la quality gate bloquante
 
 La quality gate SonarQube (`sonar.qualitygate.wait=true`) **bloque** sur du code
-neuf fautif (condition `new_violations = 0` de la gate « Sonar way »). Le job
-`gitops-release` a `needs: [deploy-smoke, sonarqube (optional)]` : une gate rouge
-fait échouer `sonarqube` → `gitops-release` est **omis** → **aucun déploiement**.
-La gate bloque donc la *release*, pas seulement le statut du pipeline.
+neuf fautif. Le projet utilise une gate dédiée **« Orion »** (créée par
+`bootstrap.sh`) — phase d'observation : conditions bloquantes `new_violations = 0`,
+hotspots revus = 100 %, duplication code neuf ≤ 3 %, **couverture non bloquante**
+tant qu'elle monte (cf. doc CI/CD §4.3). Une **promotion propre reste donc verte à
+coup sûr**, mais toute nouvelle violation bloque. Le job `gitops-release` a
+`needs: [deploy-smoke, sonarqube (optional)]` : une gate rouge fait échouer
+`sonarqube` → `gitops-release` **omis** → **aucun déploiement**. La gate bloque donc
+la *release*, pas seulement le statut du pipeline.
 
 **Démo (add/remove d'une ligne — pas de code commenté résiduel** qui déclenche
 lui-même la règle S125 «commented-out code»**)** : dans

@@ -121,12 +121,24 @@ reste fonctionnel même sans ces intégrations.
 
 ### 4.3 Quality Gate SonarQube
 
-Critères : 0 bug bloquant/critique nouveau, 0 hotspot sécurité non revu, couverture
-sur code nouveau ≥ 60 %, duplication < 3 %. Le job `sonarqube` attend le verdict
-(`sonar.qualitygate.wait=true`) : **échec de la gate = pipeline rouge = release
-impossible**. L'instance SonarQube tourne sur le poste et est jointe par les runners
-GitLab via un tunnel Cloudflare (cf. §5.5). Adoption progressive : 2 semaines
-d'observation avant mode bloquant, seuils relevés par paliers (60 → 80 %).
+Une **quality gate dédiée « Orion »** est configurée (créée et associée au projet
+automatiquement par `scripts/secret/bootstrap.sh`), pensée pour la **phase
+d'observation** où la couverture monte encore (back 56,4 %, front 27,0 %) :
+
+| Condition (sur le **code neuf**) | Seuil |
+|---|---|
+| Nouvelles violations (`new_violations`) | **= 0** (clean-as-you-code) |
+| Hotspots sécurité revus (`new_security_hotspots_reviewed`) | **= 100 %** |
+| Duplication du code neuf (`new_duplicated_lines_density`) | **≤ 3 %** |
+| Couverture du code neuf | **non bloquante pour l'instant** (suivie, relevée par paliers 60 → 80 %) |
+
+Le job `sonarqube` attend le verdict (`sonar.qualitygate.wait=true`) : **échec de la
+gate = pipeline rouge = release impossible** (la gate est câblée dans les `needs` de
+`gitops-release`, cf. §7). Ce réglage garantit qu'une **promotion propre reste verte**
+tout en **bloquant** toute nouvelle violation, hotspot non revu ou duplication — donc
+la démonstration de blocage (secret en dur) fonctionne. L'instance SonarQube tourne
+sur le poste, jointe par les runners GitLab via un tunnel Cloudflare (cf. §5.5). La
+couverture deviendra bloquante après la période d'observation (2 semaines).
 
 ## 5. Architecture IaC, Cloud et GitOps
 

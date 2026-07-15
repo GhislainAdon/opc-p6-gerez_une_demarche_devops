@@ -132,7 +132,9 @@ echo "  gate 'Orion' : new_violations=0, hotspots revus=100 %, duplication<=3 % 
 log "Configuring Kubernetes (Docker Desktop) + Argo CD"
 kubectl config use-context docker-desktop
 kubectl create namespace argocd --dry-run=client -o yaml | kubectl apply -f -
-kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+# --server-side évite la limite d'annotation (le CRD applicationsets dépasse
+# 262144 octets en apply client-side).
+kubectl apply --server-side --force-conflicts -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
 for ns in dev test prod; do
   kubectl create namespace "$ns" --dry-run=client -o yaml | kubectl apply -f -
   if [ -n "${REGISTRY_USER:-}" ] && [ -n "${REGISTRY_TOKEN:-}" ]; then

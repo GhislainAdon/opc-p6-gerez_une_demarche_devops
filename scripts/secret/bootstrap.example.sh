@@ -101,9 +101,18 @@ curl -su "admin:admin" -X POST \
   "http://localhost:${SONAR_PORT}/api/user_tokens/revoke" --data "name=orion-ci" >/dev/null 2>&1 || true
 curl -su "admin:admin" -X POST "http://localhost:${SONAR_PORT}/api/users/change_password" \
   --data "login=admin&previousPassword=admin&password=${SONAR_ADMIN_PASS}" >/dev/null 2>&1 || true
-SONAR_TOKEN=$(curl -su "admin:${SONAR_ADMIN_PASS}" -X POST \
-  "http://localhost:${SONAR_PORT}/api/user_tokens/generate?name=orion-ci" \
-  | grep -oE '"token":"[^"]+"' | cut -d'"' -f4 || true)
+# Génère le token — avec retry : sur une instance fraîche, la génération peut
+# renvoyer vide tant que SonarQube n'est pas complètement prêt (sinon SONAR_TOKEN
+# resterait périmé et l'analyse échouerait en 401).
+SONAR_TOKEN=""
+for _ in $(seq 1 10); do
+  curl -su "admin:${SONAR_ADMIN_PASS}" -X POST \
+    "http://localhost:${SONAR_PORT}/api/user_tokens/revoke" --data "name=orion-ci" >/dev/null 2>&1 || true
+  SONAR_TOKEN=$(curl -su "admin:${SONAR_ADMIN_PASS}" -X POST \
+    "http://localhost:${SONAR_PORT}/api/user_tokens/generate?name=orion-ci" \
+    | grep -oE '"token":"[^"]+"' | cut -d'"' -f4 || true)
+  [ -n "$SONAR_TOKEN" ] && break; sleep 3
+done
 [ -n "$SONAR_TOKEN" ] || echo "WARN: token not auto-generated — create one at ${SONAR_PUBLIC}/account/security"
 
 # ---- 3b. Quality gate « Orion » (réaliste, phase d'observation) -----------

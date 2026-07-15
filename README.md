@@ -194,6 +194,7 @@ respecte pas le flux `dev → test → prod` (voir [Environnements & flux GitOps
 | `SONAR_TOKEN` | Jeton d'analyse SonarQube (masqué) |
 | `GITOPS_PUSH_TOKEN` | Jeton `write_repository` — permet à la CI de pousser le commit de release GitOps (masqué) |
 | `DISCORD_WEBHOOK_URL_DEV` / `_TEST` / `_PROD` | Webhook Discord par environnement (masqués) |
+| `SONAR_QUALITYGATE_WAIT` | Blocage de la quality gate : `true` (défaut) = bloquant, `false` = observationnel |
 | `DISCORD_WEBHOOK_URL` | Webhook de repli pour toute autre branche (optionnel, masqué) |
 
 Aucun secret n'est versionné. Toutes ces variables sont posées automatiquement
@@ -302,24 +303,38 @@ UI Argo CD, page du token Sonar.
 > redémarrage** : relance le script (ou juste la partie tunnel + `set_var
 > SONAR_HOST_URL`) à chaque session pour rafraîchir la variable GitLab.
 
-### Démo de la quality gate bloquante
+### Démo — Scénario 2 : la quality gate qui bloque
 
-La quality gate SonarQube (`sonar.qualitygate.wait=true`) **bloque** sur du code
-neuf fautif. Le projet utilise une gate dédiée **« Orion »** (créée par
-`bootstrap.sh`) — phase d'observation : conditions bloquantes `new_violations = 0`,
-hotspots revus = 100 %, duplication code neuf ≤ 3 %, **couverture non bloquante**
-tant qu'elle monte (cf. doc CI/CD §4.3). Une **promotion propre reste donc verte à
-coup sûr**, mais toute nouvelle violation bloque. Le job `gitops-release` a
+> **Scénario 1** = montrer la pipeline complète en vert (merge `solution → dev` →
+> tests → gate → build → release GitOps → déploiement Argo CD → app HTTP 200).
+> **Scénario 2** (ci-dessous) = prouver que la sécurité/qualité **bloque** vraiment.
+
+Le projet utilise une gate dédiée **« Orion »** (créée par `bootstrap.sh`) — phase
+d'observation : conditions bloquantes `new_violations = 0`, hotspots revus = 100 %,
+duplication code neuf ≤ 3 %, **couverture non bloquante** tant qu'elle monte
+(cf. doc CI/CD §4.3). Une **promotion propre reste donc verte à coup sûr**, mais
+toute nouvelle violation bloque. Le job `gitops-release` a
 `needs: [deploy-smoke, sonarqube (optional)]` : une gate rouge fait échouer
 `sonarqube` → `gitops-release` **omis** → **aucun déploiement**. La gate bloque donc
 la *release*, pas seulement le statut du pipeline.
 
-**Démo (add/remove d'une ligne — pas de code commenté résiduel** qui déclenche
-lui-même la règle S125 «commented-out code»**)** : dans
-`back/.../MicroCRMApplication.java`, ajouter une ligne à secret en dur
-(ex. `private static final String DB_PASSWORD = "Sup3rSecret!";`), *commit + push*
-→ SonarQube lève une nouvelle violation → **gate rouge → release bloquée**.
-**Supprimer** la ligne → *push* → gate verte → déploiement repart.
+**Démonstration (ajouter puis retirer une ligne — pas de code commenté résiduel**
+qui déclencherait lui-même la règle S125 «commented-out code»**)** :
+
+1. Dans `back/.../MicroCRMApplication.java`, **ajouter** une ligne à secret en dur :
+   `private static final String DB_PASSWORD = "Sup3rSecret!";`
+2. *commit + push* → SonarQube lève une nouvelle violation → **gate ROUGE** → job
+   `sonarqube` en échec → `gitops-release` omis → **aucun déploiement**.
+3. **Supprimer** la ligne → *push* → gate **VERTE** → le déploiement repart.
+
+**Ajuster la gate**
+- **Conditions** (seuils) : définies par `scripts/secret/bootstrap.sh` via l'API
+  SonarQube (crée « Orion », retire la condition de couverture), ou modifiables
+  dans l'UI SonarQube → *Quality Gates → Orion*. Ex. pour rendre la couverture
+  bloquante après l'observation : y rajouter la condition `Coverage on New Code ≥ 60`.
+- **Blocage on/off** sans toucher au pipeline : variable CI/CD
+  **`SONAR_QUALITYGATE_WAIT`** (défaut `true`). La passer à `false` rend la gate
+  **observationnelle** (analyse remontée, mais le job ne bloque plus).
 
 ### Alternative : Minikube + Helm (sans GitOps)
 

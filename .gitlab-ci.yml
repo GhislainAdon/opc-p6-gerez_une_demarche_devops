@@ -126,10 +126,11 @@ sonarqube:
     key: sonar-$CI_COMMIT_REF_SLUG
     paths: [.sonar/cache]
   script:
-    # -Dsonar.qualitygate.wait=true blocks the pipeline until SonarQube returns
-    # the gate verdict: a failing gate (bug / vulnerability / coverage on new
-    # code / duplication) fails this job and stops the release.
-    - sonar-scanner -Dsonar.qualitygate.wait=true
+    # sonar.qualitygate.wait blocks the pipeline until SonarQube returns the gate
+    # verdict: a failing gate fails this job and stops the release. Toggle via the
+    # CI/CD variable SONAR_QUALITYGATE_WAIT (default "true"); set it to "false" to
+    # make the gate observational (non-blocking) without touching the pipeline.
+    - sonar-scanner -Dsonar.qualitygate.wait="${SONAR_QUALITYGATE_WAIT:-true}"
 
 # ------------------------------------------------------------- package
 

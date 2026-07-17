@@ -173,6 +173,13 @@ kubectl apply -f deploy/argocd/application-dev.yaml
 ARGO_PASS=$(kubectl -n argocd get secret argocd-initial-admin-secret \
   -o jsonpath='{.data.password}' | base64 -d 2>/dev/null || echo "<see argocd-initial-admin-secret>")
 
+# Exposer l'UI Argo CD en NodePort (accès DIRECT, sans port-forward). Le TLS
+# d'Argo CD est CONSERVÉ : au premier accès, accepter l'avertissement de
+# certificat auto-signé du navigateur.
+kubectl -n argocd patch svc argocd-server --type merge \
+  -p '{"spec":{"type":"NodePort","ports":[{"name":"http","protocol":"TCP","port":80,"targetPort":8080,"nodePort":30900},{"name":"https","protocol":"TCP","port":443,"targetPort":8080,"nodePort":30901}]}}' >/dev/null 2>&1 || true
+ARGO_URL="https://localhost:30901"
+
 # ---- 5. GitLab CI/CD variables -------------------------------------------
 log "Setting GitLab CI/CD variables via the API"
 set_var() { # key value masked
@@ -198,8 +205,8 @@ cat <<EOF
 
   SonarQube (public) : $SONAR_PUBLIC
   SonarQube token    : ${SONAR_PUBLIC}/account/security   (admin / ${SONAR_ADMIN_PASS})
-  Argo CD UI         : run  kubectl -n argocd port-forward svc/argocd-server 8080:443
-                       then https://localhost:8080   (admin / ${ARGO_PASS})
+  Argo CD UI         : ${ARGO_URL}   (admin / ${ARGO_PASS})
+                       (certificat auto-signé : accepter l'avertissement du navigateur)
 
   GitLab variables set: SONAR_HOST_URL, SONAR_TOKEN, GITOPS_PUSH_TOKEN,
                         DISCORD_WEBHOOK_URL_DEV/_TEST/_PROD

@@ -27,10 +27,24 @@ rm -f scripts/secret/cloudflared.pid scripts/secret/cloudflared*.log scripts/sec
 # (argocd-server 30901, front dev/test/prod 30080/81/82) et retire Argo CD +
 # l'application. Le bootstrap les recrée intégralement au prochain run.
 log "Argo CD + application : suppression des namespaces (libère les NodePorts)"
-if $KC get nodes >/dev/null 2>&1; then
-  $KC delete ns argocd dev test prod --ignore-not-found --wait=false >/dev/null 2>&1 \
-    && echo "  namespaces argocd/dev/test/prod supprimés (NodePorts libérés)" \
-    || echo "  (namespaces déjà absents)"
+KC_R="$KC --request-timeout=15s"
+if $KC_R get nodes >/dev/null 2>&1; then
+  # 1) Lever les finalizers des Applications AVANT de supprimer les namespaces —
+  #    sinon le finalizer resources-finalizer.argocd.argoproj.io bloque le
+  #    namespace en « Terminating » pour toujours (le contrôleur disparaît avec lui).
+  for app in microcrm-dev microcrm-test microcrm-prod; do
+    $KC_R -n argocd patch application "$app" --type merge \
+      -p '{"metadata":{"finalizers":null}}' >/dev/null 2>&1 || true
+  done
+  # 2) Supprimer, puis attendre la fin RÉELLE (le prochain bootstrap doit pouvoir
+  #    recréer les namespaces sans conflit).
+  $KC_R delete ns argocd dev test prod --ignore-not-found --wait=false >/dev/null 2>&1 || true
+  printf '  suppression en cours'
+  for _ in $(seq 1 36); do
+    left=$($KC_R get ns argocd dev test prod --no-headers 2>/dev/null | wc -l)
+    [ "${left:-0}" = "0" ] && break; printf '.'; sleep 5
+  done
+  echo " terminé — namespaces argocd/dev/test/prod supprimés (NodePorts libérés)"
 else
   echo "  (cluster Kubernetes indisponible — rien à supprimer)"
 fi

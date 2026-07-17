@@ -61,10 +61,15 @@ if [ "${RESET_DEMO:-1}" = "1" ]; then
     "$API/projects/$PROJECT_ENC/repository/branches?branch=dev&ref=master" \
     --header "PRIVATE-TOKEN: $GITLAB_TOKEN")
   echo "  dev -> baseline master  [HTTP $code]"
-  # Cluster propre : retire l'app Argo CD dev (recréée plus bas). Elle se
-  # (re)déploiera pour de vrai au premier merge solution -> dev pendant la démo.
-  kubectl delete -f deploy/argocd/application-dev.yaml --ignore-not-found >/dev/null 2>&1 || true
-  kubectl -n dev delete deploy,svc --all >/dev/null 2>&1 || true
+  # Cluster propre : retire l'app Argo CD dev (recréée plus bas). IMPORTANT :
+  # on lève d'abord son finalizer (resources-finalizer.argocd.argoproj.io),
+  # sinon `kubectl delete` attend indéfiniment un contrôleur Argo CD qui
+  # n'existe peut-être plus (cause du blocage « dev -> baseline »).
+  KC_R="kubectl --request-timeout=15s"
+  $KC_R -n argocd patch application microcrm-dev --type merge \
+    -p '{"metadata":{"finalizers":null}}' >/dev/null 2>&1 || true
+  $KC_R delete -f deploy/argocd/application-dev.yaml --ignore-not-found --wait=false >/dev/null 2>&1 || true
+  $KC_R -n dev delete deploy,svc --all --wait=false >/dev/null 2>&1 || true
 fi
 
 # ---- 1. SonarQube ---------------------------------------------------------
@@ -146,6 +151,13 @@ echo "  gate 'Orion' : new_violations=0, hotspots revus=100 %, duplication<=3 % 
 # ---- 4. Argo CD + cluster ------------------------------------------------
 log "Configuring Kubernetes (Docker Desktop) + Argo CD"
 kubectl config use-context docker-desktop
+# Si un ancien run a laissé des namespaces en cours de suppression (Terminating),
+# attendre qu'ils disparaissent avant de les recréer (sinon l'apply échoue).
+echo -n "  waiting for any Terminating namespaces"
+for _ in $(seq 1 36); do
+  term=$(kubectl --request-timeout=15s get ns argocd dev test prod --no-headers 2>/dev/null | grep -c Terminating || true)
+  [ "${term:-0}" = "0" ] && break; echo -n "."; sleep 5
+done; echo " ok"
 kubectl create namespace argocd --dry-run=client -o yaml | kubectl apply -f -
 # --server-side évite la limite d'annotation (le CRD applicationsets dépasse
 # 262144 octets en apply client-side).

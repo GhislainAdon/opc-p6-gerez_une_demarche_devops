@@ -68,19 +68,19 @@ if [ "${RESET_DEMO:-1}" = "1" ]; then
 fi
 
 # ---- 1. SonarQube ---------------------------------------------------------
-log "Starting SonarQube on :$SONAR_PORT"
-if ! docker ps -a --format '{{.Names}}' | grep -qx sonarqube; then
-  # Heaps réduits : indispensable sur un poste chargé (K8s + Argo CD + runner) —
-  # sinon SonarQube (Elasticsearch inclus) sature la RAM et le moteur Docker tombe.
-  docker run -d --name sonarqube -p "${SONAR_PORT}:9000" \
-    -e SONAR_ES_BOOTSTRAP_CHECKS_DISABLE=true \
-    -e SONAR_SEARCH_JAVAADDITIONALOPTS="-Xms512m -Xmx512m" \
-    -e SONAR_WEB_JAVAOPTS="-Xmx512m" \
-    -e SONAR_CE_JAVAOPTS="-Xmx512m" \
-    sonarqube:community
-else
-  docker start sonarqube >/dev/null
-fi
+log "Starting SonarQube on :$SONAR_PORT (fresh container)"
+# On recrée un conteneur FRAIS à chaque run : réutiliser un ancien (dont le mot
+# de passe admin a déjà été changé) fait échouer le change_password puis la
+# génération de token (SONAR_TOKEN vide -> 401 en CI). Fresh = admin/admin connu.
+docker rm -f sonarqube >/dev/null 2>&1 || true
+# Heaps réduits : indispensable sur un poste chargé (K8s + Argo CD + runner) —
+# sinon SonarQube (Elasticsearch inclus) sature la RAM et le moteur Docker tombe.
+docker run -d --name sonarqube -p "${SONAR_PORT}:9000" \
+  -e SONAR_ES_BOOTSTRAP_CHECKS_DISABLE=true \
+  -e SONAR_SEARCH_JAVAADDITIONALOPTS="-Xms512m -Xmx512m" \
+  -e SONAR_WEB_JAVAOPTS="-Xmx512m" \
+  -e SONAR_CE_JAVAOPTS="-Xmx512m" \
+  sonarqube:community
 echo -n "Waiting for SonarQube"
 until curl -sf "http://localhost:${SONAR_PORT}/api/system/status" | grep -q '"status":"UP"'; do
   echo -n "."; sleep 5

@@ -10,5 +10,5 @@ output "releases" {
 
 output "front_urls" {
   description = "Access hint for the frontend services"
-  value       = "minikube service microcrm-front -n <dev|staging> --url"
+  value       = "minikube service microcrm-front -n <dev|test> --url"
 }

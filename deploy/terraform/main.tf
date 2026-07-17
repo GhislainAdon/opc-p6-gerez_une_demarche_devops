@@ -1,6 +1,6 @@
 # Infrastructure-as-Code — Minikube deployment of the Orion Full-Stack app.
 #
-# Creates the dev and staging namespaces and installs the microcrm Helm chart
+# Creates the dev and test namespaces and installs the microcrm Helm chart
 # in each, with environment-specific values.
 #
 #   minikube start

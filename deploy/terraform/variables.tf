@@ -7,7 +7,7 @@ variable "kube_context" {
 variable "environments" {
   description = "Environments to provision (one namespace + Helm release each)"
   type        = list(string)
-  default     = ["dev", "staging"]
+  default     = ["dev", "test"]
 }
 
 variable "registry_server" {

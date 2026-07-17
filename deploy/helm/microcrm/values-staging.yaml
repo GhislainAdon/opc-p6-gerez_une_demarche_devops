@@ -1,8 +1,0 @@
-# Staging environment — resilience settings (2 replicas per component)
-back:
-  replicaCount: 2
-front:
-  replicaCount: 2
-  service:
-    type: NodePort
-    nodePort: 30081

@@ -12,7 +12,7 @@
   vars:
     terraform_dir: "{{ playbook_dir }}/../terraform"
     image_tag: latest
-    environments: [dev, staging]
+    environments: [dev, test]
 
   tasks:
     - name: Apply Terraform (namespaces + Helm releases)

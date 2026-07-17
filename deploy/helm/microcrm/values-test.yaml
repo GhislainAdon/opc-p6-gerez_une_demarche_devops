@@ -1,4 +1,4 @@
-# Test/staging environment — namespace "test". 2 replicas per component to
+# Test environment — namespace "test". 2 replicas per component to
 # validate resilience before promotion to prod.
 # image.registry/tag are pinned automatically by the GitOps release job.
 image:

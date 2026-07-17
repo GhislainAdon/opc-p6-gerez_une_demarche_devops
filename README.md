@@ -350,7 +350,7 @@ minikube service microcrm-front --url
 
 ### IaC Terraform + Ansible
 
-- [`deploy/terraform/`](./deploy/terraform) : crée les namespaces `dev` et `staging`
+- [`deploy/terraform/`](./deploy/terraform) : crée les namespaces `dev` et `test`
   et installe une release Helm dans chacun (`terraform apply -var image_tag=<tag>`).
   State local, aucun credential versionné.
 - [`deploy/ansible/`](./deploy/ansible) :

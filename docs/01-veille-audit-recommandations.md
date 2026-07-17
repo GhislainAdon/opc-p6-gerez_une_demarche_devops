@@ -79,7 +79,7 @@ compatibilité avec GitLab CI (déjà en place), courbe d'apprentissage des équ
 #### 2.2.5 Kubernetes + Helm (orchestration, partie 2)
 - **Description** : orchestrateur de conteneurs standard de fait + gestionnaire de paquets de manifestes (charts versionnés, values par environnement).
 - **Catégorie** : Orchestration.
-- **Cas d'usage** : déploiements reproductibles staging/démo, scalabilité et résilience demandées par la direction ; exécutable localement via Minikube sans coût cloud.
+- **Cas d'usage** : déploiements reproductibles test/démo, scalabilité et résilience demandées par la direction ; exécutable localement via Minikube sans coût cloud.
 - **Références** : kubernetes.io, helm.sh.
 
 #### 2.2.6 Terraform + Ansible (Infrastructure-as-Code, partie 2)

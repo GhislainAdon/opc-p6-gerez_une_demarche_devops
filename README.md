@@ -376,3 +376,12 @@ Les 4 métriques **DORA** sont calculées depuis l'API GitLab par
 | Script | But | Fonctionnement | Paramètres |
 |---|---|---|---|
 | `dora_metrics.py` | Mesure de la performance de livraison | Interroge l'API GitLab (pipelines + commits) et calcule : fréquence de déploiement/semaine, lead time médian commit→succès, taux d'échec des changements, MTTR (échec→succès suivant). Résultat affiché + `reports/dora_metrics.json`. | `--branch` (défaut `solution`), `--days` (défaut 30), `--project-id` ; env `GITLAB_TOKEN` |
+
+<!-- ────────────────────────────────────────────────────────────────────────
+     DEMO-TRIGGER — ligne de re-déclenchement de pipeline (démo soutenance).
+     Cette ligne existe uniquement pour offrir une modification triviale :
+     la SUPPRIMER (puis commit + push sur `dev`) crée un nouveau commit et
+     RE-DÉCLENCHE le pipeline avec les caches déjà chauds (npm/gradle/trivy/sonar).
+     À retirer après la démo. Sans effet fonctionnel sur l'application.
+     ──────────────────────────────────────────────────────────────────────── -->
+<!-- demo-trigger: rev-1 -->
